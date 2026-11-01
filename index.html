@@ -1628,18 +1628,19 @@
             const pendingRides = c.rides.filter(r => r.tabStatus !== 'Paid');
 
             return `
-                <div class="border-b border-slate-100 pb-4 space-y-3">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-slate-900 text-xl">${c.client}</h3>
-                            <p class="text-xs text-slate-500 mt-1">${c.phone ? 'Phone: ' + c.phone + ' &bull; ' : ''} ${c.rides.length} Total Rides (${pendingRides.length} Unsettled)</p>
-                        </div>
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
-                            ${pendingCount > 0 ? `${pendingCount} Pending` : 'All Settled'}
-                        </span>
+                <!-- Top Section: Stacked Cleanly on Left, Status Badge on Right -->
+                <div class="flex justify-between items-start border-b border-slate-100 pb-4">
+                    <div class="space-y-1">
+                        <h3 class="font-bold text-slate-900 text-xl">${c.client}</h3>
+                        ${c.phone ? `<p class="text-xs text-slate-600 font-medium">Phone: ${c.phone}</p>` : ''}
+                        <p class="text-xs text-slate-500">${c.rides.length} Total Rides &bull; ${pendingRides.length} Unsettled</p>
                     </div>
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                        ${pendingCount > 0 ? `${pendingCount} Pending` : 'All Settled'}
+                    </span>
                 </div>
 
+                <!-- Middle Section: Financial Totals Card -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200/85">
                     <div class="flex justify-between items-center sm:block">
                         <span class="text-slate-500 block sm:mb-0.5">Unpaid USD Total:</span>
@@ -1651,6 +1652,7 @@
                     </div>
                 </div>
 
+                <!-- Ride Details & History Table -->
                 <div class="space-y-2 pt-2">
                     <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ride Details & History</p>
                     <div class="overflow-x-auto border border-slate-100 rounded-xl">
