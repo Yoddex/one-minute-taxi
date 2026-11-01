@@ -2789,22 +2789,8 @@ async function downloadClientInvoicePDF(clientName) {
 
         // --- CLIENT INVOICE PDF DOWNLOAD & SHARE GENERATOR ---
         async function sendClientInvoiceWhatsApp(clientName) {
+            // Include both pending and partial rides that have a remaining balance
             const tabRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() && r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01);
-
-            // Robustly fetch client payments from localStorage or global scope
-            let allPayments = [];
-            try {
-                const savedPayments = localStorage.getItem('omt_payments') || localStorage.getItem('payments');
-                if (savedPayments) {
-                    allPayments = JSON.parse(savedPayments);
-                } else if (typeof payments !== 'undefined') {
-                    allPayments = payments;
-                }
-            } catch (e) {
-                if (typeof payments !== 'undefined') allPayments = payments;
-            }
-
-            const clientPayments = allPayments.filter(p => (p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
 
             const { jsPDF } = window.jspdf || {};
             if (!jsPDF) {
@@ -2842,47 +2828,39 @@ async function downloadClientInvoicePDF(clientName) {
                         <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
                     </div>
 
-                    <h4 style="font-size: 12px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; text-transform: uppercase;">Unsettled Rides</h4>
+                    <h4 style="font-size: 12px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; text-transform: uppercase;">Ride & Account Breakdown</h4>
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
                         <thead>
                             <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
-                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 25%;">Date</th>
-                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 55%;">Route Details</th>
-                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Balance Due</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 22%;">Date</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 43%;">Route Details</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 17%;">Original / Paid</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 18%;">Balance Due</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${tabRides.length > 0 ? tabRides.map(r => `
-                                <tr style="border-bottom: 1px solid #f1f5f9;">
-                                    <td style="padding: 8px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
-                                    <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}</td>
-                                    <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${getRideRemainingUSD(r).toFixed(2)}</td>
-                                </tr>
-                            `).join('') : `<tr><td colspan="3" style="padding: 10px; text-align: center; color: #64748b;">No unsettled rides.</td></tr>`}
+                            ${tabRides.length > 0 ? tabRides.map(r => {
+                                const originalAmount = parseFloat(r.amount || 0);
+                                const remainingAmount = getRideRemainingUSD(r);
+                                const paidAmount = originalAmount - remainingAmount;
+
+                                return `
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 8px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
+                                        <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">
+                                            ${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}
+                                            ${r.tabStatus === 'Partial' ? `<span style="display: block; font-size: 8px; color: #d97706; font-weight: 700; margin-top: 2px;">STATUS: PARTIAL</span>` : ''}
+                                        </td>
+                                        <td style="padding: 8px; text-align: right; vertical-align: top;">
+                                            <div style="font-weight: 600; color: #0f172a;">$${originalAmount.toFixed(2)}</div>
+                                            ${paidAmount > 0.01 ? `<div style="font-size: 9px; color: #16a34a; font-weight: 700; margin-top: 2px;">- $${paidAmount.toFixed(2)} paid</div>` : ''}
+                                        </td>
+                                        <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${remainingAmount.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('') : `<tr><td colspan="4" style="padding: 10px; text-align: center; color: #64748b;">No unsettled rides.</td></tr>`}
                         </tbody>
                     </table>
-
-                    ${clientPayments.length > 0 ? `
-                        <h4 style="font-size: 12px; font-weight: 700; color: #0f172a; margin: 20px 0 8px 0; text-transform: uppercase;">Recent Payments & Credits</h4>
-                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
-                            <thead>
-                                <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
-                                    <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 30%;">Date</th>
-                                    <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 50%;">Note / Method</th>
-                                    <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Amount Settled</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${clientPayments.map(p => `
-                                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                                        <td style="padding: 8px; color: #64748b; vertical-align: top;">${new Date(p.date || Date.now()).toLocaleDateString()}</td>
-                                        <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top;">${p.note || 'Payment Received'}</td>
-                                        <td style="padding: 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">$${parseFloat(p.amount || 0).toFixed(2)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    ` : ''}
 
                     <div style="display: flex; justify-content: flex-end;">
                         <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: #15803d; font-size: 11px;">
@@ -2930,7 +2908,7 @@ async function downloadClientInvoicePDF(clientName) {
                     navigator.share({
                         files: [pdfFile],
                         title: `Invoice - ${clientName}`,
-                        text: `Here is the financial statement and payment history for ${clientName}.`
+                        text: `Here is the financial statement for ${clientName}.`
                     }).catch(err => console.log('Share canceled or failed', err));
                 } else {
                     // Fallback for desktop or unsupported browsers
