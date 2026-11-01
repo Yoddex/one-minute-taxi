@@ -2761,132 +2761,118 @@ async function downloadClientInvoicePDF(clientName) {
             }, 100);
         }
 
-        // --- CLIENT STATEMENT & WHATSAPP PDF GENERATOR ---
-async function sendClientInvoiceWhatsApp(clientName) {
-    let clientPhone = '';
-    if (typeof clients !== 'undefined' && Array.isArray(clients)) {
-        const found = clients.find(c => (c.name || '').trim().toLowerCase() === clientName.trim().toLowerCase());
-        if (found && found.phone) {
-            clientPhone = found.phone.replace(/[^0-9+]/g, '');
-        }
-    }
+        // --- CLIENT INVOICE PDF VIEWER & TAB GENERATOR ---
+        async function sendClientInvoiceWhatsApp(clientName) {
+            const tabRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() && r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01);
 
-    const tabRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() && r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01);
+            if (tabRides.length === 0) {
+                alert(`No unsettled rides found for ${clientName}.`);
+                return;
+            }
 
-    if (tabRides.length === 0) {
-        alert(`No unsettled rides found for ${clientName}.`);
-        return;
-    }
+            const { jsPDF } = window.jspdf || {};
+            if (!jsPDF) {
+                alert('jsPDF library is not loaded.');
+                return;
+            }
 
-    let usdTotalDue = 0;
-    let ridesSummaryText = tabRides.map(r => {
-        const rem = getRideRemainingUSD(r);
-        usdTotalDue += rem;
-        return `- ${new Date(r.date).toLocaleDateString()}: ${r.from || 'Pickup'} -> ${r.to || 'Destination'} ($${rem.toFixed(2)})`;
-    }).join('\n');
+            const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    const message = `Hello ${clientName},\n\nHere is your statement and invoice PDF from *One Minute Taxi*:\n\n${ridesSummaryText}\n\n*Total Balance Due: $${usdTotalDue.toFixed(2)}*\n\nThank you for riding with us!`;
+            // Build template element with fixed width for standard portrait printing
+            const element = document.createElement('div');
+            element.style.width = '700px';
+            element.style.background = '#ffffff';
+            element.style.padding = '25px';
+            element.style.boxSizing = 'border-box';
+            element.style.fontFamily = 'Arial, sans-serif';
 
-    const { jsPDF } = window.jspdf || {};
-    if (!jsPDF) {
-        alert('jsPDF library is not loaded.');
-        return;
-    }
+            let usdTotalDue = 0;
+            tabRides.forEach(r => { usdTotalDue += getRideRemainingUSD(r); });
 
-    const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-    // Build template element with fixed width for standard portrait printing
-    const element = document.createElement('div');
-    element.style.width = '700px';
-    element.style.background = '#ffffff';
-    element.style.padding = '25px';
-    element.style.boxSizing = 'border-box';
-    element.style.fontFamily = 'Arial, sans-serif';
-
-    element.innerHTML = `
-        <div style="width: 100%; color: #1e293b; background-color: #ffffff;">
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 12px; margin-bottom: 20px;">
-                <div>
-                    <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
-                    <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Dispatch & Client Billing</p>
+            element.innerHTML = `
+                <div style="width: 100%; color: #1e293b; background-color: #ffffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 12px; margin-bottom: 20px;">
+                        <div>
+                            <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
+                            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Dispatch & Client Billing</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="font-size: 16px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Invoice</h2>
+                            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Date: ${todayDate}</p>
+                        </div>
+                    </div>
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                        <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 2px 0;">Billed To:</p>
+                        <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 25%;">Date</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 55%;">Route Details</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Balance Due</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tabRides.map(r => `
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td style="padding: 8px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
+                                    <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}</td>
+                                    <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${getRideRemainingUSD(r).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: #15803d; font-size: 11px;">
+                            Total Due: $${usdTotalDue.toFixed(2)}
+                        </div>
+                    </div>
                 </div>
-                <div style="text-align: right;">
-                    <h2 style="font-size: 16px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Invoice</h2>
-                    <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Date: ${todayDate}</p>
-                </div>
-            </div>
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
-                <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 2px 0;">Billed To:</p>
-                <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
-            </div>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
-                <thead>
-                    <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
-                        <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 25%;">Date</th>
-                        <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 55%;">Route Details</th>
-                        <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Balance Due</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${tabRides.map(r => `
-                        <tr style="border-bottom: 1px solid #f1f5f9;">
-                            <td style="padding: 8px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
-                            <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}</td>
-                            <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${getRideRemainingUSD(r).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            <div style="display: flex; justify-content: flex-end;">
-                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: #15803d; font-size: 11px;">
-                    Total Due: $${usdTotalDue.toFixed(2)}
-                </div>
-            </div>
-        </div>
-    `;
+            `;
 
-    // Mount off-screen for clean canvas rendering
-    element.style.position = 'absolute';
-    element.style.left = '-9999px';
-    element.style.top = '0';
-    document.body.appendChild(element);
+            // Mount off-screen for clean canvas rendering
+            element.style.position = 'absolute';
+            element.style.left = '-9999px';
+            element.style.top = '0';
+            document.body.appendChild(element);
 
-    try {
-        const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
-        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+            try {
+                const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+                const imgData = canvas.toDataURL('image/jpeg', 0.98);
 
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfPageHeight = pdf.internal.pageSize.getHeight();
-        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfPageHeight = pdf.internal.pageSize.getHeight();
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-        let heightLeft = imgHeight;
-        let position = 0;
+                let heightLeft = imgHeight;
+                let position = 0;
 
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-        heightLeft -= pdfPageHeight;
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfPageHeight;
 
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-            heightLeft -= pdfPageHeight;
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+                    heightLeft -= pdfPageHeight;
+                }
+
+                // Open the PDF cleanly in a new browser window/tab using a Blob URL
+                const pdfBlob = pdf.output('blob');
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                window.open(blobUrl, '_blank');
+
+            } catch (err) {
+                console.error('PDF Error:', err);
+                alert('Error generating invoice PDF: ' + err.message);
+            } finally {
+                if (document.body.contains(element)) {
+                    document.body.removeChild(element);
+                }
+            }
         }
-
-        pdf.save(`Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
-
-        // Open WhatsApp immediately with the summary text
-        const whatsappUrl = `https://wa.me/${clientPhone}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
-    } catch (err) {
-        console.error('PDF Error:', err);
-        alert('Error generating invoice PDF: ' + err.message);
-    } finally {
-        if (document.body.contains(element)) {
-            document.body.removeChild(element);
-        }
-    }
-}
 
         function openEditRideModal(rideId) {
             const ride = rides.find(r => r.id === rideId);
