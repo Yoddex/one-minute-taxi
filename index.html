@@ -806,141 +806,163 @@
         });
 
         // Load data (Offline-First: loads local cache instantly, syncs pending offline changes if online)
-        // Load data (Smart Sync: Automatically pulls from Gist if cloud data is newer than local memory)
-                async function loadDataFromCloud() {
-                    let localCache = null;
-                    let localTimestamp = 0;
+        // Load data with robust Gist recovery (prevents duplicate gists across devices)
+        async function loadDataFromCloud() {
+            let localCache = null;
+            let localTimestamp = 0;
 
-                    const rawLocal = localStorage.getItem('oneminute_taxi_offline_data');
-                    if (rawLocal) {
-                        try {
-                            localCache = JSON.parse(rawLocal);
-                            localTimestamp = localCache.lastModified || 0;
-                            drivers = localCache.drivers || [];
-                            rides = localCache.rides || [];
-                            payments = localCache.payments || [];
-                            driverSettlements = localCache.driverSettlements || [];
-                            clients = localCache.clients || [];
-                        } catch (err) {
-                            console.warn('Could not parse local cache', err);
-                        }
-                    }
-
-                    // If online, check the Gist to see if there is newer data from another device
-                    if (navigator.onLine && GIST_TOKEN) {
-                        try {
-                            if (!cachedGistId) {
-                                const res = await fetch(`https://api.github.com/gists`, {
-                                    headers: { 'Authorization': `token ${GIST_TOKEN}` }
-                                });
-                                const gists = await res.json();
-                                if (Array.isArray(gists)) {
-                                    const target = gists.find(g => g.files && g.files[GIST_FILENAME]);
-                                    if (target) {
-                                        cachedGistId = target.id;
-                                        localStorage.setItem('oneminute_gist_id', cachedGistId);
-                                    }
-                                }
-                            }
-
-                            if (cachedGistId) {
-                                const res = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
-                                    headers: { 'Authorization': `token ${GIST_TOKEN}` }
-                                });
-                                const gistData = await res.json();
-                                if (gistData && gistData.files && gistData.files[GIST_FILENAME]) {
-                                    const remoteParsed = JSON.parse(gistData.files[GIST_FILENAME].content);
-                                    const remoteTimestamp = remoteParsed.lastModified || 0;
-
-                                    // If the cloud version is newer than this device's local memory, adopt the cloud version!
-                                    if (remoteTimestamp > localTimestamp) {
-                                        drivers = remoteParsed.drivers || [];
-                                        rides = remoteParsed.rides || [];
-                                        payments = remoteParsed.payments || [];
-                                        driverSettlements = remoteParsed.driverSettlements || [];
-                                        clients = remoteParsed.clients || [];
-                                        localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(remoteParsed));
-                                    } else {
-                                        // Otherwise, push our local updates up if we are ahead
-                                        await saveData();
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.warn('Cloud sync check failed, using local data', e);
-                        }
-                    }
-
-                    switchTab('dashboard');
+            const rawLocal = localStorage.getItem('oneminute_taxi_offline_data');
+            if (rawLocal) {
+                try {
+                    localCache = JSON.parse(rawLocal);
+                    localTimestamp = localCache.lastModified || 0;
+                    drivers = localCache.drivers || [];
+                    rides = localCache.rides || [];
+                    payments = localCache.payments || [];
+                    driverSettlements = localCache.driverSettlements || [];
+                    clients = localCache.clients || [];
+                } catch (err) {
+                    console.warn('Could not parse local cache', err);
                 }
+            }
 
-        // Save data (Saves locally immediately, syncs to GitHub Gist if online)
-        // Save data (Saves locally with a timestamp, syncs to GitHub Gist if online)
-                async function saveData() {
-                    const payload = {
-                        drivers,
-                        rides,
-                        payments,
-                        driverSettlements,
-                        clients,
-                        lastModified: Date.now() // Adds a timestamp to track the newest changes
-                    };
-                    const contentString = JSON.stringify(payload, null, 2);
-
-                    // Always save to browser local storage first so offline work is never lost
-                    localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(payload));
-
-                    // If offline, flag that a sync is needed later and exit
-                    if (!navigator.onLine) {
-                        syncNeeded = true;
-                        localStorage.setItem('oneminute_sync_needed', 'true');
-                        console.log('Offline mode: Saved locally. Will sync when back online.');
-                        return;
-                    }
-
-                    try {
-                        if (cachedGistId) {
-                            await fetch(`https://api.github.com/gists/${cachedGistId}`, {
-                                method: 'PATCH',
-                                headers: {
-                                    'Authorization': `token ${GIST_TOKEN}`,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    description: 'One Minute Taxi Dispatch Data Backup',
-                                    files: {
-                                        [GIST_FILENAME]: { content: contentString }
-                                    }
-                                })
-                            });
-                        } else {
-                            const res = await fetch(`https://api.github.com/gists`, {
-                                method: 'POST',
-                                headers: {
-                                    'Authorization': `token ${GIST_TOKEN}`,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    description: 'One Minute Taxi Dispatch Data Backup',
-                                    public: false,
-                                    files: {
-                                        [GIST_FILENAME]: { content: contentString }
-                                    }
-                                })
-                            });
-                            const newGist = await res.json();
-                            if (newGist && newGist.id) {
-                                cachedGistId = newGist.id;
+            if (navigator.onLine && GIST_TOKEN) {
+                try {
+                    // If we don't have a cached Gist ID, search GitHub for the shared One Minute Taxi Gist
+                    if (!cachedGistId) {
+                        const res = await fetch(`https://api.github.com/gists`, {
+                            headers: { 'Authorization': `token ${GIST_TOKEN}` }
+                        });
+                        const gists = await res.json();
+                        if (Array.isArray(gists)) {
+                            const target = gists.find(g =>
+                                g.description === 'One Minute Taxi Dispatch Data Backup' ||
+                                (g.files && g.files[GIST_FILENAME])
+                            );
+                            if (target) {
+                                cachedGistId = target.id;
                                 localStorage.setItem('oneminute_gist_id', cachedGistId);
                             }
                         }
-                        syncNeeded = false;
-                    } catch (e) {
-                        syncNeeded = true;
-                        console.warn('Cloud sync failed, will retry when online:', e);
+                    }
+
+                    if (cachedGistId) {
+                        const res = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
+                            headers: { 'Authorization': `token ${GIST_TOKEN}` }
+                        });
+
+                        if (res.ok) {
+                            const gistData = await res.json();
+                            if (gistData && gistData.files && gistData.files[GIST_FILENAME]) {
+                                const remoteParsed = JSON.parse(gistData.files[GIST_FILENAME].content);
+                                const remoteTimestamp = remoteParsed.lastModified || 0;
+
+                                // Sync whichever version is newer
+                                if (remoteTimestamp > localTimestamp) {
+                                    drivers = remoteParsed.drivers || [];
+                                    rides = remoteParsed.rides || [];
+                                    payments = remoteParsed.payments || [];
+                                    driverSettlements = remoteParsed.driverSettlements || [];
+                                    clients = remoteParsed.clients || [];
+                                    localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(remoteParsed));
+                                } else {
+                                    await saveData();
+                                }
+                            }
+                        } else {
+                            // If cached ID is invalid/deleted, clear it so it searches fresh next time
+                            cachedGistId = '';
+                            localStorage.removeItem('oneminute_gist_id');
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Cloud sync check failed, using local data', e);
+                }
+            }
+
+            switchTab('dashboard');
+        }
+
+        // Save data with safety check to prevent creating duplicate gists
+        async function saveData() {
+            const payload = {
+                drivers,
+                rides,
+                payments,
+                driverSettlements,
+                clients,
+                lastModified: Date.now()
+            };
+            const contentString = JSON.stringify(payload, null, 2);
+
+            localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(payload));
+
+            if (!navigator.onLine) {
+                syncNeeded = true;
+                localStorage.setItem('oneminute_sync_needed', 'true');
+                return;
+            }
+
+            try {
+                // If we don't have a cached ID yet, do a quick search before making a new one
+                if (!cachedGistId && GIST_TOKEN) {
+                    const searchRes = await fetch(`https://api.github.com/gists`, {
+                        headers: { 'Authorization': `token ${GIST_TOKEN}` }
+                    });
+                    const gists = await searchRes.json();
+                    if (Array.isArray(gists)) {
+                        const target = gists.find(g =>
+                            g.description === 'One Minute Taxi Dispatch Data Backup' ||
+                            (g.files && g.files[GIST_FILENAME])
+                        );
+                        if (target) {
+                            cachedGistId = target.id;
+                            localStorage.setItem('oneminute_gist_id', cachedGistId);
+                        }
                     }
                 }
 
+                if (cachedGistId) {
+                    await fetch(`https://api.github.com/gists/${cachedGistId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `token ${GIST_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            description: 'One Minute Taxi Dispatch Data Backup',
+                            files: {
+                                [GIST_FILENAME]: { content: contentString }
+                            }
+                        })
+                    });
+                } else {
+                    const res = await fetch(`https://api.github.com/gists`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `token ${GIST_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            description: 'One Minute Taxi Dispatch Data Backup',
+                            public: false,
+                            files: {
+                                [GIST_FILENAME]: { content: contentString }
+                            }
+                        })
+                    });
+                    const newGist = await res.json();
+                    if (newGist && newGist.id) {
+                        cachedGistId = newGist.id;
+                        localStorage.setItem('oneminute_gist_id', cachedGistId);
+                    }
+                }
+                syncNeeded = false;
+            } catch (e) {
+                syncNeeded = true;
+                console.warn('Cloud sync failed, will retry when online:', e);
+            }
+        }
         // --- BACKUP & RESTORE FUNCTIONS ---
         function exportData() {
             const data = { drivers, rides, payments, driverSettlements, exportedAt: new Date().toISOString() };
