@@ -2792,7 +2792,6 @@ async function downloadClientInvoicePDF(clientName) {
 
         // --- CLIENT INVOICE PDF DOWNLOAD & SHARE GENERATOR ---
         // --- CLIENT INVOICE PDF DOWNLOAD & SHARE GENERATOR ---
-        // --- CLIENT INVOICE PDF DOWNLOAD & SHARE GENERATOR ---
         async function sendClientInvoiceWhatsApp(clientName) {
             const clientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
 
@@ -2817,9 +2816,9 @@ async function downloadClientInvoicePDF(clientName) {
                 allPayments = payments;
             }
 
-            // Filter payments specifically for this client
+            // Filter payments specifically for this client using 'clientName'
             const clientPayments = allPayments.filter(p => {
-                const pClient = (p.client || p.clientName || '').trim().toLowerCase();
+                const pClient = (p.clientName || p.client || '').trim().toLowerCase();
                 return pClient === clientName.trim().toLowerCase();
             });
 
@@ -2889,22 +2888,16 @@ async function downloadClientInvoicePDF(clientName) {
                                 `;
                             }).join('') : ''}
 
-                            <!-- Render Each Individual Payment with multi-property amount fallback -->
-                            ${clientPayments.length > 0 ? clientPayments.map(p => {
-                                const payAmt = parseFloat(p.amount || p.amt || p.paidAmount || p.value || p.val || 0);
-                                const payDate = p.date || p.timestamp || Date.now();
-                                const payNote = p.note || p.description || 'Account Payment';
-
-                                return `
-                                    <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
-                                        <td style="padding: 8px; color: #166534; vertical-align: top;">${new Date(payDate).toLocaleDateString()}</td>
-                                        <td style="padding: 8px; font-weight: 600; color: #166534; vertical-align: top; font-style: italic;">
-                                            Payment Received &mdash; ${payNote}
-                                        </td>
-                                        <td style="padding: 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">- $${payAmt.toFixed(2)}</td>
-                                    </tr>
-                                `;
-                            }).join('') : ''}
+                            <!-- Render Each Individual Payment as a Separate Green Row -->
+                            ${clientPayments.length > 0 ? clientPayments.map(p => `
+                                <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
+                                    <td style="padding: 8px; color: #166534; vertical-align: top;">${new Date(p.date || Date.now()).toLocaleDateString()}</td>
+                                    <td style="padding: 8px; font-weight: 600; color: #166534; vertical-align: top; font-style: italic;">
+                                        Payment Received &mdash; ${p.note || 'Account Payment'}
+                                    </td>
+                                    <td style="padding: 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">- $${parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0).toFixed(2)}</td>
+                                </tr>
+                            `).join('') : ''}
 
                             ${clientRides.length === 0 && clientPayments.length === 0 ? `
                                 <tr><td colspan="3" style="padding: 10px; text-align: center; color: #64748b;">No records found.</td></tr>
