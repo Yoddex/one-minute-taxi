@@ -1628,29 +1628,26 @@
             const pendingRides = c.rides.filter(r => r.tabStatus !== 'Paid');
 
             return `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
-                    <div>
-                        <h3 class="font-bold text-slate-900 text-xl">${c.client}</h3>
-                        <p class="text-xs text-slate-500 mt-0.5">${c.phone ? 'Phone: ' + c.phone + ' &bull; ' : ''} ${c.rides.length} Total Rides (${pendingRides.length} Unsettled)</p>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <button onclick="downloadClientInvoicePDF('${c.client.replace(/'/g, "\\'")}')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center">
-                            <i class="fa-solid fa-file-pdf mr-2"></i> Download Invoice PDF
-                        </button>
-                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                <div class="border-b border-slate-100 pb-4 space-y-3">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-xl">${c.client}</h3>
+                            <p class="text-xs text-slate-500 mt-1">${c.phone ? 'Phone: ' + c.phone + ' &bull; ' : ''} ${c.rides.length} Total Rides (${pendingRides.length} Unsettled)</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
                             ${pendingCount > 0 ? `${pendingCount} Pending` : 'All Settled'}
                         </span>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200/80">
-                    <div class="flex justify-between font-semibold">
-                        <span class="text-slate-500">Unpaid USD Total:</span>
-                        <span class="text-amber-600 font-bold text-sm">$${c.USD.toFixed(2)}</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200/85">
+                    <div class="flex justify-between items-center sm:block">
+                        <span class="text-slate-500 block sm:mb-0.5">Unpaid USD Total:</span>
+                        <span class="text-amber-600 font-bold text-base">$${c.USD.toFixed(2)}</span>
                     </div>
-                    <div class="flex justify-between font-semibold">
-                        <span class="text-slate-500">Unpaid LBP Total:</span>
-                        <span class="text-amber-600 font-bold text-sm">LBP ${Math.round(c.LBP).toLocaleString()}</span>
+                    <div class="flex justify-between items-center sm:block">
+                        <span class="text-slate-500 block sm:mb-0.5">Unpaid LBP Total:</span>
+                        <span class="text-amber-600 font-bold text-base">LBP ${Math.round(c.LBP).toLocaleString()}</span>
                     </div>
                 </div>
 
