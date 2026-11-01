@@ -2791,8 +2791,20 @@ async function downloadClientInvoicePDF(clientName) {
         async function sendClientInvoiceWhatsApp(clientName) {
             const tabRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() && r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01);
 
-            // Fetch client payments history if available in your app's state
-            const clientPayments = (typeof payments !== 'undefined' ? payments : []).filter(p => (p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
+            // Robustly fetch client payments from localStorage or global scope
+            let allPayments = [];
+            try {
+                const savedPayments = localStorage.getItem('omt_payments') || localStorage.getItem('payments');
+                if (savedPayments) {
+                    allPayments = JSON.parse(savedPayments);
+                } else if (typeof payments !== 'undefined') {
+                    allPayments = payments;
+                }
+            } catch (e) {
+                if (typeof payments !== 'undefined') allPayments = payments;
+            }
+
+            const clientPayments = allPayments.filter(p => (p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
 
             const { jsPDF } = window.jspdf || {};
             if (!jsPDF) {
