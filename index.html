@@ -2761,7 +2761,7 @@ async function downloadClientInvoicePDF(clientName) {
             }, 100);
         }
 
-        // --- CLIENT INVOICE PDF VIEWER & TAB GENERATOR ---
+        // --- CLIENT INVOICE PDF DOWNLOAD GENERATOR ---
         async function sendClientInvoiceWhatsApp(clientName) {
             const tabRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() && r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01);
 
@@ -2859,10 +2859,8 @@ async function downloadClientInvoicePDF(clientName) {
                     heightLeft -= pdfPageHeight;
                 }
 
-                // Open the PDF cleanly in a new browser window/tab using a Blob URL
-                const pdfBlob = pdf.output('blob');
-                const blobUrl = URL.createObjectURL(pdfBlob);
-                window.open(blobUrl, '_blank');
+                // Safely trigger the PDF file download (No WhatsApp redirection)
+                pdf.save(`Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
 
             } catch (err) {
                 console.error('PDF Error:', err);
