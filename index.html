@@ -806,73 +806,48 @@
         });
 
         // Load data (Offline-First: loads local cache instantly, syncs pending offline changes if online)
-        async function loadDataFromCloud() {
-            // 1. Load from local storage cache immediately so UI loads instantly offline
-            const localCache = localStorage.getItem('oneminute_taxi_offline_data');
-            if (localCache) {
-                try {
-                    const parsed = JSON.parse(localCache);
-                    drivers = parsed.drivers || [];
-                    rides = parsed.rides || [];
-                    payments = parsed.payments || [];
-                    driverSettlements = parsed.driverSettlements || [];
-                    clients = parsed.clients || [];
-                } catch (err) {
-                    console.warn('Could not parse local cache', err);
-                }
-            }
-
-            // 2. If online, fetch from GitHub Gist or push pending local changes
-            if (navigator.onLine) {
-                try {
-                    // Check if we saved changes while offline that haven't synced yet
-                    const pendingSync = localStorage.getItem('oneminute_sync_needed') === 'true';
-
-                    if (!cachedGistId) {
-                        const res = await fetch(`https://api.github.com/gists`, {
-                            headers: { 'Authorization': `token ${GIST_TOKEN}` }
-                        });
-                        const gists = await res.json();
-                        if (Array.isArray(gists)) {
-                            const target = gists.find(g => g.files && g.files[GIST_FILENAME]);
-                            if (target) {
-                                cachedGistId = target.id;
-                                localStorage.setItem('oneminute_gist_id', cachedGistId);
-                            }
+        // Load data (Offline-First: Local storage is always master; safely pushes updates up to Gist)
+                async function loadDataFromCloud() {
+                    // 1. Always load directly from local storage cache first (guarantees local edits never get wiped)
+                    const localCache = localStorage.getItem('oneminute_taxi_offline_data');
+                    if (localCache) {
+                        try {
+                            const parsed = JSON.parse(localCache);
+                            drivers = parsed.drivers || [];
+                            rides = parsed.rides || [];
+                            payments = parsed.payments || [];
+                            driverSettlements = parsed.driverSettlements || [];
+                            clients = parsed.clients || [];
+                        } catch (err) {
+                            console.warn('Could not parse local cache', err);
                         }
                     }
 
-                    if (cachedGistId) {
-                        if (pendingSync) {
-                            // If we have offline changes waiting, push our local state UP to GitHub first!
+                    // 2. If online, push our current local state UP to GitHub Gist as a secure backup
+                    if (navigator.onLine && GIST_TOKEN) {
+                        try {
+                            if (!cachedGistId) {
+                                const res = await fetch(`https://api.github.com/gists`, {
+                                    headers: { 'Authorization': `token ${GIST_TOKEN}` }
+                                });
+                                const gists = await res.json();
+                                if (Array.isArray(gists)) {
+                                    const target = gists.find(g => g.files && g.files[GIST_FILENAME]);
+                                    if (target) {
+                                        cachedGistId = target.id;
+                                        localStorage.setItem('oneminute_gist_id', cachedGistId);
+                                    }
+                                }
+                            }
+                            // Sync latest local changes up to GitHub in the background
                             await saveData();
-                            localStorage.removeItem('oneminute_sync_needed');
-                        } else {
-                            // Otherwise, pull the latest from GitHub
-                            const res = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
-                                headers: { 'Authorization': `token ${GIST_TOKEN}` }
-                            });
-                            const gistData = await res.json();
-                            if (gistData && gistData.files && gistData.files[GIST_FILENAME]) {
-                                const parsed = JSON.parse(gistData.files[GIST_FILENAME].content);
-                                drivers = parsed.drivers || [];
-                                rides = parsed.rides || [];
-                                payments = parsed.payments || [];
-                                driverSettlements = parsed.driverSettlements || [];
-                                clients = parsed.clients || [];
-
-                                // Update local cache with fresh cloud data
-                                localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(parsed));
-                            }
+                        } catch (e) {
+                            console.warn('Background cloud sync update failed, local data remains safe', e);
                         }
                     }
-                } catch (e) {
-                    console.warn('GitHub sync check failed, relying on offline local data', e);
-                }
-            }
 
-            switchTab('dashboard');
-        }
+                    switchTab('dashboard');
+                }
 
         // Save data (Saves locally immediately, syncs to GitHub Gist if online)
         async function saveData() {
