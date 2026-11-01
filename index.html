@@ -884,85 +884,97 @@
         }
 
         // Save data with safety check to prevent creating duplicate gists
-        async function saveData() {
-            const payload = {
-                drivers,
-                rides,
-                payments,
-                driverSettlements,
-                clients,
-                lastModified: Date.now()
-            };
-            const contentString = JSON.stringify(payload, null, 2);
+        // Save data with immediate network confirmation
+                async function saveData() {
+                    const payload = {
+                        drivers,
+                        rides,
+                        payments,
+                        driverSettlements,
+                        clients,
+                        lastModified: Date.now()
+                    };
+                    const contentString = JSON.stringify(payload, null, 2);
 
-            localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(payload));
+                    // Always save locally first so offline work is never lost
+                    localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(payload));
 
-            if (!navigator.onLine) {
-                syncNeeded = true;
-                localStorage.setItem('oneminute_sync_needed', 'true');
-                return;
-            }
+                    if (!navigator.onLine) {
+                        syncNeeded = true;
+                        localStorage.setItem('oneminute_sync_needed', 'true');
+                        console.log('Offline mode: Saved locally.');
+                        return;
+                    }
 
-            try {
-                // If we don't have a cached ID yet, do a quick search before making a new one
-                if (!cachedGistId && GIST_TOKEN) {
-                    const searchRes = await fetch(`https://api.github.com/gists`, {
-                        headers: { 'Authorization': `token ${GIST_TOKEN}` }
-                    });
-                    const gists = await searchRes.json();
-                    if (Array.isArray(gists)) {
-                        const target = gists.find(g =>
-                            g.description === 'One Minute Taxi Dispatch Data Backup' ||
-                            (g.files && g.files[GIST_FILENAME])
-                        );
-                        if (target) {
-                            cachedGistId = target.id;
-                            localStorage.setItem('oneminute_gist_id', cachedGistId);
+                    try {
+                        // Search for Gist ID if missing
+                        if (!cachedGistId && GIST_TOKEN) {
+                            const searchRes = await fetch(`https://api.github.com/gists`, {
+                                headers: { 'Authorization': `token ${GIST_TOKEN}` }
+                            });
+                            const gists = await searchRes.json();
+                            if (Array.isArray(gists)) {
+                                const target = gists.find(g =>
+                                    g.description === 'One Minute Taxi Dispatch Data Backup' ||
+                                    (g.files && g.files[GIST_FILENAME])
+                                );
+                                if (target) {
+                                    cachedGistId = target.id;
+                                    localStorage.setItem('oneminute_gist_id', cachedGistId);
+                                }
+                            }
                         }
+
+                        let response;
+                        if (cachedGistId) {
+                            response = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
+                                method: 'PATCH',
+                                headers: {
+                                    'Authorization': `token ${GIST_TOKEN}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    description: 'One Minute Taxi Dispatch Data Backup',
+                                    files: {
+                                        [GIST_FILENAME]: { content: contentString }
+                                    }
+                                })
+                            });
+                        } else {
+                            response = await fetch(`https://api.github.com/gists`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `token ${GIST_TOKEN}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    description: 'One Minute Taxi Dispatch Data Backup',
+                                    public: false,
+                                    files: {
+                                        [GIST_FILENAME]: { content: contentString }
+                                    }
+                                })
+                            });
+                            const newGist = await response.json();
+                            if (newGist && newGist.id) {
+                                cachedGistId = newGist.id;
+                                localStorage.setItem('oneminute_gist_id', cachedGistId);
+                            }
+                        }
+
+                        if (response && response.ok) {
+                            syncNeeded = false;
+                            console.log('☁️ Cloud Sync Successful!');
+                        } else {
+                            throw new Error('GitHub API responded with status: ' + (response ? response.status : 'unknown'));
+                        }
+                    } catch (e) {
+                        syncNeeded = true;
+                        localStorage.setItem('oneminute_sync_needed', 'true');
+                        console.warn('⚠️ Cloud sync failed, will retry:', e);
                     }
                 }
 
-                if (cachedGistId) {
-                    await fetch(`https://api.github.com/gists/${cachedGistId}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': `token ${GIST_TOKEN}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            description: 'One Minute Taxi Dispatch Data Backup',
-                            files: {
-                                [GIST_FILENAME]: { content: contentString }
-                            }
-                        })
-                    });
-                } else {
-                    const res = await fetch(`https://api.github.com/gists`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `token ${GIST_TOKEN}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            description: 'One Minute Taxi Dispatch Data Backup',
-                            public: false,
-                            files: {
-                                [GIST_FILENAME]: { content: contentString }
-                            }
-                        })
-                    });
-                    const newGist = await res.json();
-                    if (newGist && newGist.id) {
-                        cachedGistId = newGist.id;
-                        localStorage.setItem('oneminute_gist_id', cachedGistId);
-                    }
-                }
-                syncNeeded = false;
-            } catch (e) {
-                syncNeeded = true;
-                console.warn('Cloud sync failed, will retry when online:', e);
-            }
-        }
         // --- BACKUP & RESTORE FUNCTIONS ---
         function exportData() {
             const data = { drivers, rides, payments, driverSettlements, exportedAt: new Date().toISOString() };
