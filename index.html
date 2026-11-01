@@ -884,7 +884,7 @@
         }
 
         // Save data with safety check to prevent creating duplicate gists
-        // Save data with immediate network confirmation
+        // Save data with full GitHub API spec headers
                 async function saveData() {
                     const payload = {
                         drivers,
@@ -896,31 +896,36 @@
                     };
                     const contentString = JSON.stringify(payload, null, 2);
 
-                    // Always save locally first so offline work is never lost
                     localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(payload));
 
                     if (!navigator.onLine) {
                         syncNeeded = true;
                         localStorage.setItem('oneminute_sync_needed', 'true');
-                        console.log('Offline mode: Saved locally.');
                         return;
                     }
 
+                    // Standardized GitHub API headers
+                    const authHeaders = {
+                        'Authorization': `Bearer ${GIST_TOKEN.trim()}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json'
+                    };
+
                     try {
-                        // Search for Gist ID if missing
+                        // Find existing Gist if ID isn't cached locally
                         if (!cachedGistId && GIST_TOKEN) {
-                            const searchRes = await fetch(`https://api.github.com/gists`, {
-                                headers: { 'Authorization': `token ${GIST_TOKEN}` }
-                            });
-                            const gists = await searchRes.json();
-                            if (Array.isArray(gists)) {
-                                const target = gists.find(g =>
-                                    g.description === 'One Minute Taxi Dispatch Data Backup' ||
-                                    (g.files && g.files[GIST_FILENAME])
-                                );
-                                if (target) {
-                                    cachedGistId = target.id;
-                                    localStorage.setItem('oneminute_gist_id', cachedGistId);
+                            const searchRes = await fetch(`https://api.github.com/gists`, { headers: authHeaders });
+                            if (searchRes.ok) {
+                                const gists = await searchRes.json();
+                                if (Array.isArray(gists)) {
+                                    const target = gists.find(g =>
+                                        g.description === 'One Minute Taxi Dispatch Data Backup' ||
+                                        (g.files && g.files[GIST_FILENAME])
+                                    );
+                                    if (target) {
+                                        cachedGistId = target.id;
+                                        localStorage.setItem('oneminute_gist_id', cachedGistId);
+                                    }
                                 }
                             }
                         }
@@ -929,10 +934,7 @@
                         if (cachedGistId) {
                             response = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
                                 method: 'PATCH',
-                                headers: {
-                                    'Authorization': `token ${GIST_TOKEN}`,
-                                    'Content-Type': 'application/json'
-                                },
+                                headers: authHeaders,
                                 body: JSON.stringify({
                                     description: 'One Minute Taxi Dispatch Data Backup',
                                     files: {
@@ -943,10 +945,7 @@
                         } else {
                             response = await fetch(`https://api.github.com/gists`, {
                                 method: 'POST',
-                                headers: {
-                                    'Authorization': `token ${GIST_TOKEN}`,
-                                    'Content-Type': 'application/json'
-                                },
+                                headers: authHeaders,
                                 body: JSON.stringify({
                                     description: 'One Minute Taxi Dispatch Data Backup',
                                     public: false,
@@ -955,25 +954,29 @@
                                     }
                                 })
                             });
-                            const newGist = await response.json();
-                            if (newGist && newGist.id) {
-                                cachedGistId = newGist.id;
-                                localStorage.setItem('oneminute_gist_id', cachedGistId);
+                            if (response.ok) {
+                                const newGist = await response.json();
+                                if (newGist && newGist.id) {
+                                    cachedGistId = newGist.id;
+                                    localStorage.setItem('oneminute_gist_id', cachedGistId);
+                                }
                             }
                         }
 
                         if (response && response.ok) {
                             syncNeeded = false;
+                            localStorage.removeItem('oneminute_sync_needed');
                             console.log('☁️ Cloud Sync Successful!');
                         } else {
-                            throw new Error('GitHub API responded with status: ' + (response ? response.status : 'unknown'));
+                            const errBody = await response.text();
+                            throw new Error(`GitHub ${response.status}: ${errBody}`);
                         }
-                      } catch (e) {
-                          syncNeeded = true;
-                          localStorage.setItem('oneminute_sync_needed', 'true');
-                          console.error('❌ Cloud sync error details:', e);
-                          alert('Cloud Sync Failed: ' + e.message); // This will pop up on your screen and tell us the exact reason!
-                      }
+                    } catch (e) {
+                        syncNeeded = true;
+                        localStorage.setItem('oneminute_sync_needed', 'true');
+                        console.error('Cloud sync error:', e);
+                        alert('Cloud Sync Failed: ' + e.message);
+                    }
                 }
 
         // --- BACKUP & RESTORE FUNCTIONS ---
