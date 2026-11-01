@@ -1,0 +1,15 @@
+{
+  "name": "One Minute Taxi",
+  "short_name": "OMT Taxi",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "https://oneminutetaxi.com/wp-content/uploads/2024/03/cropped-logo-01-2.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
