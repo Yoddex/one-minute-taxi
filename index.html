@@ -806,7 +806,10 @@
         });
 
         // Load data (Offline-First: loads local cache instantly, syncs pending offline changes if online)
-        // Load data with strict token check and rate-limit guard
+        let isSyncing = false;
+                let saveTimeout = null;
+
+                // Rate-Limit Aware Cloud Loader
                 async function loadDataFromCloud() {
                     let localCache = null;
                     let localTimestamp = 0;
@@ -822,20 +825,14 @@
                             driverSettlements = localCache.driverSettlements || [];
                             clients = localCache.clients || [];
                         } catch (err) {
-                            console.warn('Could not parse local cache', err);
+                            console.warn('Local cache parsing error', err);
                         }
                     }
 
-                    // Ensure token exists before attempting ANY request
-                    if (!GIST_TOKEN || GIST_TOKEN.trim() === '') {
-                        GIST_TOKEN = prompt('Enter your GitHub Personal Access Token (starts with ghp_):') || '';
-                        if (GIST_TOKEN) {
-                            localStorage.setItem('oneminute_gist_token', GIST_TOKEN.trim());
-                        } else {
-                            console.warn('No token provided. Staying in offline mode.');
-                            switchTab('dashboard');
-                            return;
-                        }
+                    // Do not execute fetch if token is missing or if a sync operation is already running
+                    if (!GIST_TOKEN || GIST_TOKEN.trim() === '' || isSyncing) {
+                        switchTab('dashboard');
+                        return;
                     }
 
                     const authHeaders = {
@@ -844,9 +841,17 @@
                     };
 
                     if (navigator.onLine) {
+                        isSyncing = true;
                         try {
                             if (!cachedGistId) {
                                 const res = await fetch(`https://api.github.com/gists`, { headers: authHeaders });
+
+                                // Check remaining rate limit from headers
+                                const remaining = res.headers.get('x-ratelimit-remaining');
+                                if (remaining && parseInt(remaining) === 0) {
+                                    throw new Error('Rate limit exhausted. Falling back to local data.');
+                                }
+
                                 if (res.ok) {
                                     const gists = await res.json();
                                     if (Array.isArray(gists)) {
@@ -859,9 +864,6 @@
                                             localStorage.setItem('oneminute_gist_id', cachedGistId);
                                         }
                                     }
-                                } else if (res.status === 403) {
-                                    // If rate limited or token invalid, clear token so user can re-enter
-                                    throw new Error('Rate limit or token rejection. Please verify your token.');
                                 }
                             }
 
@@ -880,33 +882,23 @@
                                             driverSettlements = remoteParsed.driverSettlements || [];
                                             clients = remoteParsed.clients || [];
                                             localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(remoteParsed));
-                                        } else {
-                                            await saveData();
                                         }
                                     }
                                 }
                             }
                         } catch (e) {
-                            console.warn('Cloud sync check failed, using local data', e);
+                            console.warn('Cloud load skipped:', e.message);
+                        } finally {
+                            isSyncing = false;
                         }
                     }
 
                     switchTab('dashboard');
                 }
 
-                // Helper function to force token reset anytime from the screen
-                function resetGitHubToken() {
-                    localStorage.removeItem('oneminute_gist_token');
-                    localStorage.removeItem('oneminute_gist_id');
-                    GIST_TOKEN = '';
-                    cachedGistId = '';
-                    alert('Token cleared! Reloading page...');
-                    location.reload();
-                }
-
-        // Save data with safety check to prevent creating duplicate gists
-        // Save data with full GitHub API spec headers
-                async function saveData() {
+                // Debounced Save Function to Prevent Rapid API Firing
+                function debouncedSaveData() {
+                    // Save to local storage immediately so local state is never lost
                     const payload = {
                         drivers,
                         rides,
@@ -915,88 +907,45 @@
                         clients,
                         lastModified: Date.now()
                     };
-                    const contentString = JSON.stringify(payload, null, 2);
-
                     localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(payload));
 
-                    if (!navigator.onLine) {
-                        syncNeeded = true;
-                        localStorage.setItem('oneminute_sync_needed', 'true');
-                        return;
-                    }
+                    // Throttle API call by 2 seconds
+                    clearTimeout(saveTimeout);
+                    saveTimeout = setTimeout(() => {
+                        saveDataToCloud();
+                    }, 2000);
+                }
 
-                    // Standardized GitHub API headers
+                async function saveDataToCloud() {
+                    if (!GIST_TOKEN || !navigator.onLine || isSyncing) return;
+
+                    const rawLocal = localStorage.getItem('oneminute_taxi_offline_data');
+                    if (!rawLocal) return;
+
                     const authHeaders = {
                         'Authorization': `Bearer ${GIST_TOKEN.trim()}`,
                         'Accept': 'application/vnd.github.v3+json',
                         'Content-Type': 'application/json'
                     };
 
+                    isSyncing = true;
                     try {
-                        // Find existing Gist if ID isn't cached locally
-                        if (!cachedGistId && GIST_TOKEN) {
-                            const searchRes = await fetch(`https://api.github.com/gists`, { headers: authHeaders });
-                            if (searchRes.ok) {
-                                const gists = await searchRes.json();
-                                if (Array.isArray(gists)) {
-                                    const target = gists.find(g =>
-                                        g.description === 'One Minute Taxi Dispatch Data Backup' ||
-                                        (g.files && g.files[GIST_FILENAME])
-                                    );
-                                    if (target) {
-                                        cachedGistId = target.id;
-                                        localStorage.setItem('oneminute_gist_id', cachedGistId);
-                                    }
-                                }
-                            }
-                        }
-
-                        let response;
                         if (cachedGistId) {
-                            response = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
+                            await fetch(`https://api.github.com/gists/${cachedGistId}`, {
                                 method: 'PATCH',
                                 headers: authHeaders,
                                 body: JSON.stringify({
                                     description: 'One Minute Taxi Dispatch Data Backup',
                                     files: {
-                                        [GIST_FILENAME]: { content: contentString }
+                                        [GIST_FILENAME]: { content: rawLocal }
                                     }
                                 })
                             });
-                        } else {
-                            response = await fetch(`https://api.github.com/gists`, {
-                                method: 'POST',
-                                headers: authHeaders,
-                                body: JSON.stringify({
-                                    description: 'One Minute Taxi Dispatch Data Backup',
-                                    public: false,
-                                    files: {
-                                        [GIST_FILENAME]: { content: contentString }
-                                    }
-                                })
-                            });
-                            if (response.ok) {
-                                const newGist = await response.json();
-                                if (newGist && newGist.id) {
-                                    cachedGistId = newGist.id;
-                                    localStorage.setItem('oneminute_gist_id', cachedGistId);
-                                }
-                            }
-                        }
-
-                        if (response && response.ok) {
-                            syncNeeded = false;
-                            localStorage.removeItem('oneminute_sync_needed');
-                            console.log('☁️ Cloud Sync Successful!');
-                        } else {
-                            const errBody = await response.text();
-                            throw new Error(`GitHub ${response.status}: ${errBody}`);
                         }
                     } catch (e) {
-                        syncNeeded = true;
-                        localStorage.setItem('oneminute_sync_needed', 'true');
-                        console.error('Cloud sync error:', e);
-                        alert('Cloud Sync Failed: ' + e.message);
+                        console.warn('Cloud save deferred:', e);
+                    } finally {
+                        isSyncing = false;
                     }
                 }
 
