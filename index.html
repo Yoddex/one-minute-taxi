@@ -806,10 +806,11 @@
         });
 
         // Load data (Offline-First: loads local cache instantly, syncs pending offline changes if online)
-        // Load data (Offline-First: Local storage is always master; safely pushes updates up to Gist)
+        // Load data (Smart Hybrid: Keeps phone local storage safe as master, but pulls from Gist if opened on a new device)
                 async function loadDataFromCloud() {
-                    // 1. Always load directly from local storage cache first (guarantees local edits never get wiped)
                     const localCache = localStorage.getItem('oneminute_taxi_offline_data');
+
+                    // 1. If this device already has local data, load it immediately (protects your phone edits from ever being wiped)
                     if (localCache) {
                         try {
                             const parsed = JSON.parse(localCache);
@@ -823,7 +824,7 @@
                         }
                     }
 
-                    // 2. If online, push our current local state UP to GitHub Gist as a secure backup
+                    // 2. Online sync check
                     if (navigator.onLine && GIST_TOKEN) {
                         try {
                             if (!cachedGistId) {
@@ -839,10 +840,30 @@
                                     }
                                 }
                             }
-                            // Sync latest local changes up to GitHub in the background
-                            await saveData();
+
+                            if (cachedGistId) {
+                                if (!localCache) {
+                                    // If opening on a brand new device with no local history, pull your data down from GitHub!
+                                    const res = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
+                                        headers: { 'Authorization': `token ${GIST_TOKEN}` }
+                                    });
+                                    const gistData = await res.json();
+                                    if (gistData && gistData.files && gistData.files[GIST_FILENAME]) {
+                                        const parsed = JSON.parse(gistData.files[GIST_FILENAME].content);
+                                        drivers = parsed.drivers || [];
+                                        rides = parsed.rides || [];
+                                        payments = parsed.payments || [];
+                                        driverSettlements = parsed.driverSettlements || [];
+                                        clients = parsed.clients || [];
+                                        localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(parsed));
+                                    }
+                                } else {
+                                    // If it's your regular phone with local data, push your latest updates UP to GitHub as a backup
+                                    await saveData();
+                                }
+                            }
                         } catch (e) {
-                            console.warn('Background cloud sync update failed, local data remains safe', e);
+                            console.warn('Cloud sync check failed, local data remains safe', e);
                         }
                     }
 
