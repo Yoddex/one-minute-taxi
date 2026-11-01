@@ -2794,7 +2794,7 @@ async function downloadClientInvoicePDF(clientName) {
         async function sendClientInvoiceWhatsApp(clientName) {
             const tabRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() && r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01);
 
-            // Fetch client payments from localStorage or global scope
+            // Gather payments from localStorage or app state
             let allPayments = [];
             try {
                 const savedPayments = localStorage.getItem('omt_payments') || localStorage.getItem('payments');
@@ -2807,6 +2807,7 @@ async function downloadClientInvoicePDF(clientName) {
                 if (typeof payments !== 'undefined') allPayments = payments;
             }
 
+            // Filter payments for this specific client
             const clientPayments = allPayments.filter(p => (p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
 
             const { jsPDF } = window.jspdf || {};
@@ -2845,50 +2846,47 @@ async function downloadClientInvoicePDF(clientName) {
                         <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
                     </div>
 
-                    <h4 style="font-size: 12px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; text-transform: uppercase;">Unsettled Rides</h4>
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 10px; table-layout: fixed;">
+                    <h4 style="font-size: 12px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; text-transform: uppercase;">Account Ledger (Rides & Payments)</h4>
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
                         <thead>
                             <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
                                 <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 22%;">Date</th>
-                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 58%;">Route Details</th>
-                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Balance Due</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 58%;">Description / Route</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Amount</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${tabRides.length > 0 ? tabRides.map(r => `
-                                <tr style="border-bottom: 1px solid #f1f5f9;">
-                                    <td style="padding: 8px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
-                                    <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">
-                                        ${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}
-                                        ${r.tabStatus === 'Partial' ? `<span style="display: block; font-size: 8px; color: #d97706; font-weight: 700; margin-top: 2px;">STATUS: PARTIAL (Original: $${parseFloat(r.amount || 0).toFixed(2)})</span>` : ''}
+                            <!-- Render Unsettled Rides with Full Amount -->
+                            ${tabRides.length > 0 ? tabRides.map(r => {
+                                const originalAmount = parseFloat(r.amount || 0);
+                                return `
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 8px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
+                                        <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">
+                                            ${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}
+                                            ${r.tabStatus === 'Partial' ? `<span style="display: block; font-size: 8px; color: #d97706; font-weight: 700; margin-top: 2px;">STATUS: PARTIAL RIDE</span>` : ''}
+                                        </td>
+                                        <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${originalAmount.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('') : ''}
+
+                            <!-- Render Separate Payment Rows in Green -->
+                            ${clientPayments.length > 0 ? clientPayments.map(p => `
+                                <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
+                                    <td style="padding: 8px; color: #166534; vertical-align: top;">${new Date(p.date || Date.now()).toLocaleDateString()}</td>
+                                    <td style="padding: 8px; font-weight: 600; color: #166534; vertical-align: top;">
+                                        <i style="font-size: 9px;">Payment Received / Credit</i> &mdash; ${p.note || 'Account Payment'}
                                     </td>
-                                    <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${getRideRemainingUSD(r).toFixed(2)}</td>
+                                    <td style="padding: 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">- $${parseFloat(p.amount || 0).toFixed(2)}</td>
                                 </tr>
-                            `).join('') : `<tr><td colspan="3" style="padding: 10px; text-align: center; color: #64748b;">No unsettled rides.</td></tr>`}
+                            `).join('') : ''}
+
+                            ${tabRides.length === 0 && clientPayments.length === 0 ? `
+                                <tr><td colspan="3" style="padding: 10px; text-align: center; color: #64748b;">No active records found.</td></tr>
+                            ` : ''}
                         </tbody>
                     </table>
-
-                    ${clientPayments.length > 0 ? `
-                        <h4 style="font-size: 12px; font-weight: 700; color: #0f172a; margin: 15px 0 8px 0; text-transform: uppercase;">Payments Applied</h4>
-                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
-                            <thead>
-                                <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
-                                    <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 22%;">Date</th>
-                                    <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 58%;">Payment Details</th>
-                                    <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Amount Paid</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${clientPayments.map(p => `
-                                    <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
-                                        <td style="padding: 8px; color: #166534; vertical-align: top;">${new Date(p.date || Date.now()).toLocaleDateString()}</td>
-                                        <td style="padding: 8px; font-weight: 600; color: #166534; vertical-align: top;">${p.note || 'Payment Received'}</td>
-                                        <td style="padding: 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">- $${parseFloat(p.amount || 0).toFixed(2)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    ` : ''}
 
                     <div style="display: flex; justify-content: flex-end;">
                         <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: #15803d; font-size: 11px;">
