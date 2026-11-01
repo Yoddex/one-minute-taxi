@@ -968,11 +968,12 @@
                         } else {
                             throw new Error('GitHub API responded with status: ' + (response ? response.status : 'unknown'));
                         }
-                    } catch (e) {
-                        syncNeeded = true;
-                        localStorage.setItem('oneminute_sync_needed', 'true');
-                        console.warn('⚠️ Cloud sync failed, will retry:', e);
-                    }
+                      } catch (e) {
+                          syncNeeded = true;
+                          localStorage.setItem('oneminute_sync_needed', 'true');
+                          console.error('❌ Cloud sync error details:', e);
+                          alert('Cloud Sync Failed: ' + e.message); // This will pop up on your screen and tell us the exact reason!
+                      }
                 }
 
         // --- BACKUP & RESTORE FUNCTIONS ---
