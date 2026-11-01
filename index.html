@@ -2742,9 +2742,23 @@ async function downloadClientInvoicePDF(clientName) {
                     heightLeft -= pdfPageHeight;
                 }
 
+                // Create a properly named File object for clean mobile sharing
+                const fileName = `Driver_Statement_${driverName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
                 const pdfBlob = pdf.output('blob');
-                const blobUrl = URL.createObjectURL(pdfBlob);
-                window.open(blobUrl, '_blank');
+                const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                // Check if mobile browser supports native file sharing
+                if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                    navigator.share({
+                        files: [pdfFile],
+                        title: `Statement - ${driverName}`,
+                        text: `Here is the financial statement for ${driverName}.`
+                    }).catch(err => console.log('Share canceled or failed', err));
+                } else {
+                    // Fallback for desktop or unsupported browsers
+                    const blobUrl = URL.createObjectURL(pdfBlob);
+                    window.open(blobUrl, '_blank');
+                }
             } catch (err) {
                 console.error('PDF Error:', err);
                 alert('Error generating PDF document: ' + err.message);
@@ -2870,9 +2884,23 @@ async function downloadClientInvoicePDF(clientName) {
                 }
 
                 // Safely trigger the PDF file download (No WhatsApp redirection)
+                // Create a properly named File object for clean mobile sharing
+                const fileName = `Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
                 const pdfBlob = pdf.output('blob');
-                const blobUrl = URL.createObjectURL(pdfBlob);
-                window.open(blobUrl, '_blank');
+                const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                // Check if mobile browser supports native file sharing
+                if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                    navigator.share({
+                        files: [pdfFile],
+                        title: `Invoice - ${clientName}`,
+                        text: `Here is the invoice statement for ${clientName}.`
+                    }).catch(err => console.log('Share canceled or failed', err));
+                } else {
+                    // Fallback for desktop or unsupported browsers
+                    const blobUrl = URL.createObjectURL(pdfBlob);
+                    window.open(blobUrl, '_blank');
+                }
 
             } catch (err) {
                 console.error('PDF Error:', err);
