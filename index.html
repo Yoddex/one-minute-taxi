@@ -2794,8 +2794,23 @@ async function downloadClientInvoicePDF(clientName) {
         // --- CLIENT INVOICE PDF DOWNLOAD & SHARE GENERATOR ---
         // --- CLIENT INVOICE PDF DOWNLOAD & SHARE GENERATOR ---
         async function sendClientInvoiceWhatsApp(clientName) {
-            // Get all rides for this client that have any remaining balance or were part of tabs
             const clientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
+
+            // Gather all individual payment records from localStorage or global state
+            let allPayments = [];
+            try {
+                const savedPayments = localStorage.getItem('omt_payments') || localStorage.getItem('payments');
+                if (savedPayments) {
+                    allPayments = JSON.parse(savedPayments);
+                } else if (typeof payments !== 'undefined') {
+                    allPayments = payments;
+                }
+            } catch (e) {
+                if (typeof payments !== 'undefined') allPayments = payments;
+            }
+
+            // Filter payments specifically for this client
+            const clientPayments = allPayments.filter(p => (p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
 
             const { jsPDF } = window.jspdf || {};
             if (!jsPDF) {
@@ -2843,13 +2858,13 @@ async function downloadClientInvoicePDF(clientName) {
                             </tr>
                         </thead>
                         <tbody>
+                            <!-- Render Rides -->
                             ${clientRides.length > 0 ? clientRides.map(r => {
                                 const originalAmount = parseFloat(r.amount || 0);
                                 const remainingAmount = getRideRemainingUSD(r);
-                                const paidAmount = originalAmount - remainingAmount;
                                 const isPaid = r.tabStatus === 'Paid' || remainingAmount <= 0.01;
 
-                                let html = `
+                                return `
                                     <tr style="border-bottom: 1px solid #f1f5f9; ${isPaid ? 'background-color: #f8fafc; color: #94a3b8;' : ''}">
                                         <td style="padding: 8px; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
                                         <td style="padding: 8px; font-weight: 600; vertical-align: top; word-break: break-word;">
@@ -2861,22 +2876,18 @@ async function downloadClientInvoicePDF(clientName) {
                                         <td style="padding: 8px; text-align: right; font-weight: 700; vertical-align: top;">$${originalAmount.toFixed(2)}</td>
                                     </tr>
                                 `;
-
-                                // If a partial payment was made on this ride, add a separate green row right underneath it!
-                                if (paidAmount > 0.01) {
-                                    html += `
-                                        <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
-                                            <td style="padding: 6px 8px 6px 16px; color: #166534; vertical-align: top;">↳ Payment</td>
-                                            <td style="padding: 6px 8px; font-weight: 600; color: #166534; vertical-align: top; font-style: italic;">
-                                                Payment applied against above ride
-                                            </td>
-                                            <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">- $${paidAmount.toFixed(2)}</td>
-                                        </tr>
-                                    `;
-                                }
-
-                                return html;
                             }).join('') : `<tr><td colspan="3" style="padding: 10px; text-align: center; color: #64748b;">No rides found.</td></tr>`}
+
+                            <!-- Render Each Individual Payment as its own separate line in Green -->
+                            ${clientPayments.length > 0 ? clientPayments.map(p => `
+                                <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
+                                    <td style="padding: 8px; color: #166534; vertical-align: top;">${new Date(p.date || Date.now()).toLocaleDateString()}</td>
+                                    <td style="padding: 8px; font-weight: 600; color: #166534; vertical-align: top;">
+                                        <i style="font-size: 9px;">Payment Received</i> &mdash; ${p.note || 'Account Payment'}
+                                    </td>
+                                    <td style="padding: 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">- $${parseFloat(p.amount || 0).toFixed(2)}</td>
+                                </tr>
+                            `).join('') : ''}
                         </tbody>
                     </table>
 
