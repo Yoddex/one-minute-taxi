@@ -2796,21 +2796,33 @@ async function downloadClientInvoicePDF(clientName) {
         async function sendClientInvoiceWhatsApp(clientName) {
             const clientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
 
-            // Pull individual payment records from localStorage or app state
+            // Robustly check all possible localStorage keys where payments might be saved
             let allPayments = [];
-            try {
-                const savedPayments = localStorage.getItem('omt_payments') || localStorage.getItem('payments');
-                if (savedPayments) {
-                    allPayments = JSON.parse(savedPayments);
-                } else if (typeof payments !== 'undefined') {
-                    allPayments = payments;
-                }
-            } catch (e) {
-                if (typeof payments !== 'undefined') allPayments = payments;
+            const possibleKeys = ['omt_payments', 'payments', 'client_payments', 'paymentHistory', 'omt_client_payments'];
+
+            for (const key of possibleKeys) {
+                try {
+                    const val = localStorage.getItem(key);
+                    if (val) {
+                        const parsed = JSON.parse(val);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            allPayments = parsed;
+                            break;
+                        }
+                    }
+                } catch (e) {}
             }
 
-            // Filter payments specifically for this client
-            const clientPayments = allPayments.filter(p => (p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
+            // Fallback to global variable if localStorage didn't yield anything
+            if (allPayments.length === 0 && typeof payments !== 'undefined' && Array.isArray(payments)) {
+                allPayments = payments;
+            }
+
+            // Filter payments specifically for this client (checking client name property case-insensitively)
+            const clientPayments = allPayments.filter(p => {
+                const pClient = (p.client || p.clientName || '').trim().toLowerCase();
+                return pClient === clientName.trim().toLowerCase();
+            });
 
             const { jsPDF } = window.jspdf || {};
             if (!jsPDF) {
