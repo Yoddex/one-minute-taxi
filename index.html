@@ -806,7 +806,8 @@
         });
 
         // Load data (Offline-First: loads local cache instantly, syncs pending offline changes if online)
-        async function loadDataFromCloud() {
+        // Load data with strict token check and rate-limit guard
+                async function loadDataFromCloud() {
                     let localCache = null;
                     let localTimestamp = 0;
 
@@ -825,11 +826,16 @@
                         }
                     }
 
-                    // Do NOT attempt cloud fetch if token is missing
+                    // Ensure token exists before attempting ANY request
                     if (!GIST_TOKEN || GIST_TOKEN.trim() === '') {
-                        console.warn('No GitHub token found. Running in offline mode.');
-                        switchTab('dashboard');
-                        return;
+                        GIST_TOKEN = prompt('Enter your GitHub Personal Access Token (starts with ghp_):') || '';
+                        if (GIST_TOKEN) {
+                            localStorage.setItem('oneminute_gist_token', GIST_TOKEN.trim());
+                        } else {
+                            console.warn('No token provided. Staying in offline mode.');
+                            switchTab('dashboard');
+                            return;
+                        }
                     }
 
                     const authHeaders = {
@@ -853,6 +859,9 @@
                                             localStorage.setItem('oneminute_gist_id', cachedGistId);
                                         }
                                     }
+                                } else if (res.status === 403) {
+                                    // If rate limited or token invalid, clear token so user can re-enter
+                                    throw new Error('Rate limit or token rejection. Please verify your token.');
                                 }
                             }
 
@@ -883,6 +892,16 @@
                     }
 
                     switchTab('dashboard');
+                }
+
+                // Helper function to force token reset anytime from the screen
+                function resetGitHubToken() {
+                    localStorage.removeItem('oneminute_gist_token');
+                    localStorage.removeItem('oneminute_gist_id');
+                    GIST_TOKEN = '';
+                    cachedGistId = '';
+                    alert('Token cleared! Reloading page...');
+                    location.reload();
                 }
 
         // Save data with safety check to prevent creating duplicate gists
