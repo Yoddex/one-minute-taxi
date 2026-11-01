@@ -2796,7 +2796,7 @@ async function downloadClientInvoicePDF(clientName) {
         async function sendClientInvoiceWhatsApp(clientName) {
             const clientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
 
-            // Gather all individual payment records from localStorage or global state
+            // Pull individual payment records from localStorage or app state
             let allPayments = [];
             try {
                 const savedPayments = localStorage.getItem('omt_payments') || localStorage.getItem('payments');
@@ -2876,18 +2876,22 @@ async function downloadClientInvoicePDF(clientName) {
                                         <td style="padding: 8px; text-align: right; font-weight: 700; vertical-align: top;">$${originalAmount.toFixed(2)}</td>
                                     </tr>
                                 `;
-                            }).join('') : `<tr><td colspan="3" style="padding: 10px; text-align: center; color: #64748b;">No rides found.</td></tr>`}
+                            }).join('') : ''}
 
-                            <!-- Render Each Individual Payment as its own separate line in Green -->
+                            <!-- Render Each Individual Payment as a Separate Green Row -->
                             ${clientPayments.length > 0 ? clientPayments.map(p => `
                                 <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f0fdf4;">
                                     <td style="padding: 8px; color: #166534; vertical-align: top;">${new Date(p.date || Date.now()).toLocaleDateString()}</td>
-                                    <td style="padding: 8px; font-weight: 600; color: #166534; vertical-align: top;">
-                                        <i style="font-size: 9px;">Payment Received</i> &mdash; ${p.note || 'Account Payment'}
+                                    <td style="padding: 8px; font-weight: 600; color: #166534; vertical-align: top; font-style: italic;">
+                                        Payment Received &mdash; ${p.note || 'Account Payment'}
                                     </td>
                                     <td style="padding: 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">- $${parseFloat(p.amount || 0).toFixed(2)}</td>
                                 </tr>
                             `).join('') : ''}
+
+                            ${clientRides.length === 0 && clientPayments.length === 0 ? `
+                                <tr><td colspan="3" style="padding: 10px; text-align: center; color: #64748b;">No records found.</td></tr>
+                            ` : ''}
                         </tbody>
                     </table>
 
