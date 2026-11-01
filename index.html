@@ -1,0 +1,3025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>One Minute Taxi - Management Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Reliable html2pdf Library CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col pb-16 md:pb-0">
+
+    <!-- TOP HEADER / NAVBAR -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3">
+                    <img src="https://oneminutetaxi.com/wp-content/uploads/2024/03/cropped-logo-01-2.png" alt="One Minute Taxi Logo" class="w-10 h-10 rounded-xl object-cover shadow-md shadow-brand-500/20">
+                    <span class="font-bold text-slate-900 hidden sm:inline">One Minute Taxi</span>
+                </div>
+
+                <!-- Desktop Navigation Tabs -->
+                <nav class="hidden md:flex space-x-1 bg-slate-100 p-1 rounded-xl text-sm font-medium">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-chart-pie mr-2"></i>Dashboard
+                    </button>
+                    <button onclick="switchTab('drivers')" id="nav-drivers" class="px-4 py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-id-card mr-2"></i>Drivers
+                    </button>
+                    <button onclick="switchTab('rides')" id="nav-rides" class="px-4 py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-car mr-2"></i>Ride Logs
+                    </button>
+                    <button onclick="switchTab('tabs')" id="nav-tabs" class="px-4 py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-file-invoice-dollar mr-2"></i>Client Tabs
+                    </button>
+                </nav>
+
+                <!-- Actions -->
+
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- TAB 1: OVERALL DASHBOARD -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+
+            <!-- NEW: ALL-TIME LIFETIME GROSS REVENUE CARDS -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- All-Time USD Gross -->
+                <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">All-Time Gross Lifetime (USD)</p>
+                            <h3 class="text-2xl font-bold mt-1" id="dash-lifetime-gross-usd" style="color: #34d399 !important;">$0.00</h3>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-white/10 text-emerald-400">
+                            <i class="fa-solid fa-chart-line text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-slate-700 flex justify-between text-xs text-slate-300">
+                        <span>Lifetime Office 10%: <strong class="text-white" id="dash-lifetime-office-usd">$0.00</strong></span>
+                        <span>Lifetime Drivers 90%: <strong class="text-white" id="dash-lifetime-drivers-usd">$0.00</strong></span>
+                    </div>
+                </div>
+
+                <!-- All-Time LBP Gross -->
+                <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">All-Time Gross Lifetime (LBP)</p>
+                            <h3 class="text-2xl font-bold mt-1" id="dash-lifetime-gross-lbp" style="color: #7dd3fc !important;">LBP 0</h3>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-white/10 text-blue-400">
+                            <i class="fa-solid fa-wallet text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-slate-700 flex justify-between text-xs text-slate-300">
+                        <span>Lifetime Office 10%: <strong class="text-white" id="dash-lifetime-office-lbp">LBP 0</strong></span>
+                        <span>Lifetime Drivers 90%: <strong class="text-white" id="dash-lifetime-drivers-lbp">LBP 0</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Metric Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- USD Total Gross Revenue -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Gross (USD)</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="dash-gross-usd">$0.00</h3>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
+                            <i class="fa-solid fa-dollar-sign text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
+                        <span>Office 10%: <strong class="text-slate-700" id="dash-office-usd">$0.00</strong></span>
+                        <span>Drivers 90%: <strong class="text-slate-700" id="dash-drivers-cut-usd">$0.00</strong></span>
+                    </div>
+                </div>
+
+                <!-- LBP Total Gross Revenue -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Gross (LBP)</p>
+                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="dash-gross-lbp">LBP 0</h3>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+                            <i class="fa-solid fa-money-bill-wave text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
+                        <span>Office 10%: <strong class="text-slate-700" id="dash-office-lbp">LBP 0</strong></span>
+                        <span>Drivers 90%: <strong class="text-slate-700" id="dash-drivers-cut-lbp">LBP 0</strong></span>
+                    </div>
+                </div>
+
+                <!-- Cash vs Whish USD Hand Breakdown -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">USD Collection Split</span>
+                        <span class="text-xs px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 font-semibold">USD</span>
+                    </div>
+                    <div class="space-y-1.5 text-xs">
+                        <div class="flex justify-between items-center p-1.5 rounded-lg bg-slate-50">
+                            <span class="text-slate-600"><i class="fa-solid fa-hand-holding-dollar text-emerald-500 mr-1.5"></i>Cash in Driver Hand:</span>
+                            <strong class="text-slate-900" id="dash-cash-usd">$0.00</strong>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded-lg bg-slate-50">
+                            <span class="text-slate-600"><i class="fa-solid fa-building-columns text-purple-500 mr-1.5"></i>Whish in Owner Account:</span>
+                            <strong class="text-slate-900" id="dash-whish-usd">$0.00</strong>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded-lg bg-slate-50">
+                            <span class="text-slate-600"><i class="fa-solid fa-clock text-amber-500 mr-1.5"></i>Unsettled Tabs:</span>
+                            <strong class="text-slate-900" id="dash-tabs-usd">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cash vs Whish LBP Hand Breakdown -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">LBP Collection Split</span>
+                        <span class="text-xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 font-semibold">LBP</span>
+                    </div>
+                    <div class="space-y-1.5 text-xs">
+                        <div class="flex justify-between items-center p-1.5 rounded-lg bg-slate-50">
+                            <span class="text-slate-600"><i class="fa-solid fa-hand-holding-dollar text-emerald-500 mr-1.5"></i>Cash in Driver Hand:</span>
+                            <strong class="text-slate-900" id="dash-cash-lbp">LBP 0</strong>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded-lg bg-slate-50">
+                            <span class="text-slate-600"><i class="fa-solid fa-building-columns text-purple-500 mr-1.5"></i>Whish in Owner Account:</span>
+                            <strong class="text-slate-900" id="dash-whish-lbp">LBP 0</strong>
+                        </div>
+                        <div class="flex justify-between items-center p-1.5 rounded-lg bg-slate-50">
+                            <span class="text-slate-600"><i class="fa-solid fa-clock text-amber-500 mr-1.5"></i>Unsettled Tabs:</span>
+                            <strong class="text-slate-900" id="dash-tabs-lbp">LBP 0</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Driver Status Overview Cards -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Drivers Settlement Overview</h2>
+                        <p class="text-xs text-slate-500">Real-time status of driver cash holdings vs office cuts</p>
+                    </div>
+                    <button onclick="switchTab('drivers')" class="text-xs font-semibold text-brand-600 hover:text-brand-700 flex items-center">
+                        View All Drivers <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="dashboard-driver-cards">
+                    <!-- Dynamic driver summary cards inserted here -->
+                </div>
+            </div>
+
+            <!-- Recent Activity List -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-slate-900">Recent Rides Logged</h2>
+                    <button onclick="switchTab('rides')" class="text-xs font-semibold text-brand-600 hover:text-brand-700">View Full Log</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[10px] tracking-wider">
+                            <tr>
+                                <th class="p-3 rounded-l-lg">Time</th>
+                                <th class="p-3">Driver</th>
+                                <th class="p-3">Payment Type</th>
+                                <th class="p-3">Route</th>
+                                <th class="p-3">Client / Details</th>
+                                <th class="p-3">Notes</th>
+                                <th class="p-3 text-right rounded-r-lg">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dash-recent-rides-body" class="divide-y divide-slate-100">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: DRIVERS & SETTLEMENT DASHBOARD -->
+        <section id="tab-drivers" class="tab-content hidden space-y-6">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Driver Financial Statements</h2>
+                    <p class="text-xs text-slate-500">Filter by specific driver to calculate net payout or debt balance.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="driver-select-filter" onchange="renderDriverTab()" class="bg-slate-50 border border-slate-300 text-slate-800 text-xs sm:text-sm rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none flex-1 sm:flex-none">
+                        <!-- Dynamic Driver Options -->
+                    </select>
+                    <button onclick="openAddDriverModal()" class="bg-slate-900 text-white px-3 py-2 rounded-xl text-xs sm:text-sm font-medium hover:bg-slate-800 transition-all flex items-center justify-center">
+                        <i class="fa-solid fa-plus mr-1.5"></i> Add Driver
+                    </button>
+                </div>
+            </div>
+
+            <div id="driver-detail-container" class="space-y-6">
+                <!-- Populated via JS -->
+            </div>
+        </section>
+
+        <!-- TAB 3: RIDE LOGS -->
+        <section id="tab-rides" class="tab-content hidden space-y-6">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Complete Ride Log</h2>
+                    <p class="text-xs text-slate-500">All trip recordings with details & instant deletion actions</p>
+                </div>
+                <div class="flex items-center space-x-2 w-full sm:w-auto">
+                    <input type="text" id="rides-search-input" onkeyup="renderRidesTable()" placeholder="Search driver, route..." class="w-full sm:w-64 bg-slate-50 border border-slate-300 text-xs sm:text-sm rounded-xl px-3.5 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <button onclick="openAddRideModal()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm px-3.5 py-2 rounded-xl font-medium whitespace-nowrap shadow-sm">
+                        + New Ride
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs sm:text-sm text-slate-600">
+                        <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[11px] tracking-wider border-b border-slate-200">
+                            <tr>
+                                <th class="p-3.5">Date & Time</th>
+                                <th class="p-3.5">Driver</th>
+                                <th class="p-3.5">Type</th>
+                                <th class="p-3.5">Route (From &rarr; To)</th>
+                                <th class="p-3.5">Client / Details</th>
+                                <th class="p-3.5">Notes</th>
+                                <th class="p-3.5 text-right">Fare Amount</th>
+                                <th class="p-3.5 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-rides-table-body" class="divide-y divide-slate-100">
+                            <!-- Dynamic Content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: ON TAB CLIENT ACCOUNTS -->
+        <section id="tab-tabs" class="tab-content hidden space-y-6">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Client Credit Tabs & Payments</h2>
+                    <p class="text-xs text-slate-500">Manage client database, track pending tabs, or record payments</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <input type="text" id="client-search-input" onkeyup="renderClientTabs()" placeholder="Search clients..." class="bg-slate-50 border border-slate-300 text-xs sm:text-sm rounded-xl px-3.5 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 flex-1 sm:w-48">
+                    <button onclick="openAddClientModal()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm px-3.5 py-2.5 rounded-xl font-medium shadow-sm flex items-center transition-all whitespace-nowrap">
+                        <i class="fa-solid fa-user-plus mr-1.5"></i> Add Client
+                    </button>
+                    <button onclick="openNewPaymentModal()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm px-4 py-2.5 rounded-xl font-medium shadow-sm flex items-center transition-all whitespace-nowrap">
+                        <i class="fa-solid fa-wallet mr-2"></i>New Payment
+                    </button>
+                </div>
+            </div>
+
+            <!-- Client Summary Cards Grid / Directory -->
+            <div class="grid grid-cols-1 gap-4" id="client-tabs-grid">
+                <!-- Dynamic Content -->
+            </div>
+
+            <!-- Payment History Section -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 mt-8">
+                <h3 class="font-bold text-slate-900 text-base mb-4"><i class="fa-solid fa-clock-rotate-left mr-2 text-brand-600"></i>Client Payment History</h3>
+                <div id="client-payment-history-container" class="space-y-3">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 px-2 py-1 flex justify-around items-center shadow-lg">
+        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="flex flex-col items-center py-1.5 px-3 text-slate-500 hover:text-brand-600 text-xs font-medium">
+            <i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>
+            <span>Overview</span>
+        </button>
+        <button onclick="switchTab('drivers')" id="mob-nav-drivers" class="flex flex-col items-center py-1.5 px-3 text-slate-500 hover:text-brand-600 text-xs font-medium">
+            <i class="fa-solid fa-id-card text-lg mb-0.5"></i>
+            <span>Drivers</span>
+        </button>
+        <button onclick="switchTab('rides')" id="mob-nav-rides" class="flex flex-col items-center py-1.5 px-3 text-slate-500 hover:text-brand-600 text-xs font-medium">
+            <i class="fa-solid fa-car text-lg mb-0.5"></i>
+            <span>Rides</span>
+        </button>
+        <button onclick="switchTab('tabs')" id="mob-nav-tabs" class="flex flex-col items-center py-1.5 px-3 text-slate-500 hover:text-brand-600 text-xs font-medium">
+            <i class="fa-solid fa-file-invoice-dollar text-lg mb-0.5"></i>
+            <span>Tabs</span>
+        </button>
+    </div>
+
+    <!-- MODAL: ADD NEW RIDE -->
+    <div id="add-ride-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity">
+        <div class="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-taxi text-brand-600 mr-2"></i>Log New Ride</h3>
+                <button onclick="closeModal('add-ride-modal')" class="text-slate-400 hover:text-slate-600 text-lg p-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="add-ride-form" onsubmit="handleSaveRide(event)" class="space-y-4 text-xs sm:text-sm">
+                <div class="relative">
+                  <label class="block font-semibold text-slate-700 mb-1">Driver *</label>
+                  <input type="text" id="modal-ride-driver-search" placeholder="Type to search driver..." oninput="filterDriverDropdown(this.value)" autocomplete="off" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                  <input type="hidden" id="modal-ride-driver-id" required>
+                  <div id="driver-autocomplete-dropdown" class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 hidden">
+                      <!-- Dynamic matches -->
+                  </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-2">Payment Method & Collection *</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer transition-all has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:ring-1 has-[:checked]:ring-emerald-500">
+                            <input type="radio" name="ride-type-radio" value="Cash" checked onchange="toggleRideTypeFields()" class="text-emerald-600 focus:ring-emerald-500 mr-2.5">
+                            <div>
+                                <strong class="block text-slate-800 font-semibold">Cash</strong>
+                                <span class="text-[10px] text-slate-500">Physical money to Driver hand</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer transition-all has-[:checked]:bg-purple-50 has-[:checked]:border-purple-500 has-[:checked]:ring-1 has-[:checked]:ring-purple-500">
+                            <input type="radio" name="ride-type-radio" value="Whish" onchange="toggleRideTypeFields()" class="text-purple-600 focus:ring-purple-500 mr-2.5">
+                            <div>
+                                <strong class="block text-slate-800 font-semibold">Whish</strong>
+                                <span class="text-[10px] text-slate-500">Transfer directly to Owner account</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer transition-all has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:ring-1 has-[:checked]:ring-amber-500">
+                            <input type="radio" name="ride-type-radio" value="On Tab" onchange="toggleRideTypeFields()" class="text-amber-600 focus:ring-amber-500 mr-2.5">
+                            <div>
+                                <strong class="block text-slate-800 font-semibold">On Tab</strong>
+                                <span class="text-[10px] text-slate-500">Pending client tab</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer transition-all has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:ring-1 has-[:checked]:ring-blue-500">
+                            <input type="radio" name="ride-type-radio" value="To Samer" onchange="toggleRideTypeFields()" class="text-blue-600 focus:ring-blue-500 mr-2.5">
+                            <div>
+                                <strong class="block text-slate-800 font-semibold">To Samer</strong>
+                                <span class="text-[10px] text-slate-500">100% Owner / No Split</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Currency *</label>
+                        <select id="modal-ride-currency" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:ring-2 focus:ring-brand-500">
+                            <option value="USD">USD ($)</option>
+                            <option value="LBP">LBP (L.L.)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Fare Amount *</label>
+                        <input type="number" id="modal-ride-amount" step="any" min="0.1" placeholder="e.g. 15 or 150000" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">From Location *</label>
+                        <input type="text" id="modal-ride-from" placeholder="e.g. Hamra" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">To Location *</label>
+                        <input type="text" id="modal-ride-to" placeholder="e.g. Airport" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                    </div>
+                </div>
+
+                <div id="tab-client-field-container" class="hidden relative">
+                    <label class="block font-semibold text-brand-700 mb-1">Client / Company Name * (Select from list)</label>
+                    <input type="text" id="modal-ride-client-search" placeholder="Type to search existing clients..." oninput="filterClientDropdown(this.value)" autocomplete="off" class="w-full bg-emerald-50/50 border border-brand-300 rounded-xl p-2.5 text-slate-800 focus:ring-2 focus:ring-brand-500">
+                    <input type="hidden" id="modal-ride-client" required>
+                    <div id="client-autocomplete-dropdown" class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 hidden">
+                        <!-- Dynamic matches -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Notes / Remarks (Optional)</label>
+                    <input type="text" id="modal-ride-note" placeholder="Optional comments..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('add-ride-modal')" class="px-4 py-2.5 rounded-xl border border-slate-300 font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 font-semibold text-white shadow-md">Save Ride</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT RIDE -->
+    <div id="edit-ride-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity">
+        <div class="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-pen-to-square text-brand-600 mr-2"></i>Edit Ride</h3>
+                <button onclick="closeModal('edit-ride-modal')" class="text-slate-400 hover:text-slate-600 text-lg p-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="edit-ride-form" onsubmit="handleUpdateRide(event)" class="space-y-4 text-xs sm:text-sm">
+                <input type="hidden" id="edit-ride-id">
+
+                <div class="relative">
+                    <label class="block font-semibold text-slate-700 mb-1">Driver *</label>
+                    <input type="text" id="edit-ride-driver-search" placeholder="Type to search driver..." oninput="filterEditDriverDropdown(this.value)" autocomplete="off" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    <input type="hidden" id="edit-ride-driver-id" required>
+                    <div id="edit-driver-autocomplete-dropdown" class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 hidden">
+                        <!-- Dynamic matches -->
+                    </div>
+                </div>
+
+                <!-- NEW RADIO BUTTON CARDS -->
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-2">Payment Method & Collection *</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer transition-all has-[:checked]:bg-emerald-50 has-[:checked]:border-emerald-500 has-[:checked]:ring-1 has-[:checked]:ring-emerald-500">
+                            <input type="radio" name="edit-ride-type-radio" value="Cash" onchange="toggleEditRideTypeFields()" class="text-emerald-600 focus:ring-emerald-500 mr-2.5">
+                            <div>
+                                <strong class="block text-slate-800 font-semibold">Cash</strong>
+                                <span class="text-[10px] text-slate-500">Physical money to Driver hand</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer transition-all has-[:checked]:bg-purple-50 has-[:checked]:border-purple-500 has-[:checked]:ring-1 has-[:checked]:ring-purple-500">
+                            <input type="radio" name="edit-ride-type-radio" value="Whish" onchange="toggleEditRideTypeFields()" class="text-purple-600 focus:ring-purple-500 mr-2.5">
+                            <div>
+                                <strong class="block text-slate-800 font-semibold">Whish</strong>
+                                <span class="text-[10px] text-slate-500">Transfer directly to Owner account</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer transition-all has-[:checked]:bg-amber-50 has-[:checked]:border-amber-500 has-[:checked]:ring-1 has-[:checked]:ring-amber-500">
+                            <input type="radio" name="edit-ride-type-radio" value="On Tab" onchange="toggleEditRideTypeFields()" class="text-amber-600 focus:ring-amber-500 mr-2.5">
+                            <div>
+                                <strong class="block text-slate-800 font-semibold">On Tab</strong>
+                                <span class="text-[10px] text-slate-500">Pending client tab</span>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white cursor-pointer transition-all has-[:checked]:bg-blue-50 has-[:checked]:border-blue-500 has-[:checked]:ring-1 has-[:checked]:ring-blue-500">
+                            <input type="radio" name="edit-ride-type-radio" value="To Samer" onchange="toggleEditRideTypeFields()" class="text-blue-600 focus:ring-blue-500 mr-2.5">
+                            <div>
+                                <strong class="block text-slate-800 font-semibold">To Samer</strong>
+                                <span class="text-[10px] text-slate-500">100% Owner / No Split</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Currency *</label>
+                        <select id="edit-ride-currency" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:ring-2 focus:ring-brand-500">
+                            <option value="USD">USD ($)</option>
+                            <option value="LBP">LBP (L.L.)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Fare Amount *</label>
+                        <input type="number" id="edit-ride-amount" step="any" min="0.1" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">From Location *</label>
+                        <input type="text" id="edit-ride-from" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">To Location *</label>
+                        <input type="text" id="edit-ride-to" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                    </div>
+                </div>
+
+                <div id="edit-tab-client-field-container" class="hidden relative">
+                    <label class="block font-semibold text-brand-700 mb-1">Client / Company Name *</label>
+                    <input type="text" id="edit-ride-client-search" placeholder="Type to search existing clients..." oninput="filterEditClientDropdown(this.value)" autocomplete="off" class="w-full bg-emerald-50/50 border border-brand-300 rounded-xl p-2.5 text-slate-800">
+                    <input type="hidden" id="edit-ride-client">
+                    <div id="edit-client-autocomplete-dropdown" class="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto z-50 hidden"></div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Notes / Remarks (Optional)</label>
+                    <input type="text" id="edit-ride-note" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('edit-ride-modal')" class="px-4 py-2.5 rounded-xl border border-slate-300 font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 font-semibold text-white shadow-md">Update Ride</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD DRIVER -->
+    <div id="add-driver-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 hidden transition-opacity">
+        <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-5 sm:p-6 shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-user-plus text-slate-700 mr-2"></i>Add New Driver</h3>
+                <button onclick="closeModal('add-driver-modal')" class="text-slate-400 hover:text-slate-600 text-lg p-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="add-driver-form" onsubmit="handleSaveDriver(event)" class="space-y-4 text-xs sm:text-sm">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Full Driver Name *</label>
+                    <input type="text" id="modal-driver-name" required placeholder="e.g. Samer Al-Ahmad" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800 focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Phone Number (Optional)</label>
+                    <input type="tel" id="modal-driver-phone" placeholder="e.g. +961 70 123 456" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('add-driver-modal')" class="px-4 py-2.5 rounded-xl border border-slate-300 font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 font-semibold text-white shadow-md">Add Driver</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: DELETE DRIVER CONFIRMATION -->
+    <div id="delete-driver-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-xl text-center space-y-4">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Confirm Driver Deletion</h3>
+            <p class="text-xs text-slate-500">Are you sure you want to remove <strong id="delete-driver-name-text" class="text-slate-800"></strong>? This will remove all associated rides.</p>
+            <div class="flex justify-center space-x-3 pt-2">
+                <button onclick="closeModal('delete-driver-modal')" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-600 font-medium text-xs">Cancel</button>
+                <button id="confirm-delete-driver-btn" class="px-4 py-2 rounded-xl bg-red-600 text-white font-semibold text-xs hover:bg-red-700 shadow-md">Delete Driver</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NEW CLIENT PAYMENT -->
+    <div id="modal-new-payment" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-wallet text-brand-600 mr-2"></i>Record Client Payment</h3>
+                <button onclick="closeModal('modal-new-payment')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleSaveNewPayment(event)" class="space-y-4 text-xs sm:text-sm">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Select Client with Unpaid Tabs *</label>
+                    <select id="payment-client-select" onchange="updateClientPendingBalance()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                        <option value="">-- Choose Client --</option>
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
+                    <div>
+                        <span class="text-xs text-slate-500 block">Current Unpaid Balance</span>
+                        <strong id="payment-pending-summary" class="text-slate-900 text-sm">Select a client above</strong>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Amount Paid (USD $) *</label>
+                        <input type="number" step="any" id="payment-amount-paid" required placeholder="e.g. 200" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Exchange Rate (LBP / $)</label>
+                        <input type="number" id="payment-exchange-rate" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Note / Reference (Optional)</label>
+                    <input type="text" id="payment-note" placeholder="e.g. Cash received" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-new-payment')" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 font-semibold text-white shadow-md">Save Payment & Apply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: SETTLE DRIVER BALANCE -->
+    <div id="modal-settle-driver" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-slate-100">
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-50 text-brand-600 p-2.5 rounded-xl">
+                        <i class="fa-solid fa-hand-holding-dollar text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-900">Settle Driver Balance</h3>
+                        <p class="text-xs text-slate-500">Reset driver bill after weekly payout</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modal-settle-driver')" class="text-slate-400 hover:text-slate-600 p-2 rounded-lg hover:bg-slate-100 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="settle-driver-id">
+                <div class="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-200">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500">Driver Name:</span>
+                        <strong class="text-slate-900" id="settle-driver-name-display">-</strong>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500">Unsettled USD Balance:</span>
+                        <strong class="text-slate-900" id="settle-driver-usd-display">$0.00</strong>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="text-slate-500">Unsettled LBP Balance:</span>
+                        <strong class="text-slate-900" id="settle-driver-lbp-display">LBP 0</strong>
+                    </div>
+                    <!-- Conversion Rate Line -->
+                    <div class="flex justify-between items-center text-xs pt-2 border-t border-slate-200">
+                        <span class="text-slate-500">LBP/USD Conversion Rate:</span>
+                        <input type="number" id="settle-conversion-rate" value="90000" oninput="recalculateModalTotalUSD()" class="w-24 bg-white border border-slate-300 rounded px-2 py-0.5 text-right font-bold text-slate-800 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+                    <!-- Total Combined Balance in USD Line -->
+                    <div class="flex justify-between text-xs font-bold pt-1 border-t border-slate-200">
+                        <span class="text-slate-700">Total Combined Balance (USD):</span>
+                        <strong class="text-brand-600 text-sm" id="settle-driver-combined-usd-display">$0.00</strong>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Settlement Note / Reference</label>
+                    <input type="text" id="settle-driver-note" placeholder="e.g. Weekly cash payout settled on Oct 15" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="pt-2 flex items-center justify-end space-x-3">
+                    <button type="button" onclick="closeModal('modal-settle-driver')" class="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="button" onclick="executeDriverSettlement()" class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow-sm transition">Confirm & Reset Bill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD CLIENT -->
+    <div id="add-client-modal" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-user-plus text-brand-600 mr-2"></i>Add New Client</h3>
+                <button onclick="closeModal('add-client-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleSaveNewClient(event)" class="space-y-3 text-xs sm:text-sm">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Client Name *</label>
+                    <input type="text" id="new-client-name" required placeholder="e.g. John Doe or ABC Corp" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Phone Number (Optional)</label>
+                    <input type="tel" id="new-client-phone" placeholder="e.g. +961 3 123456" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('add-client-modal')" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 font-semibold text-white shadow-md">Save Client</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EDIT CLIENT -->
+    <div id="edit-client-modal" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-bold text-slate-900"><i class="fa-solid fa-pen-to-square text-brand-600 mr-2"></i>Edit Client Details</h3>
+                <button onclick="closeModal('edit-client-modal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleUpdateClient(event)" class="space-y-3 text-xs sm:text-sm">
+                <input type="hidden" id="edit-client-original-name">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Client Name *</label>
+                    <input type="text" id="edit-client-name" required class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Phone Number</label>
+                    <input type="tel" id="edit-client-phone" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-slate-800">
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('edit-client-modal')" class="px-4 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-medium">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 font-semibold text-white shadow-md">Update Client</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- APPLICATION JAVASCRIPT (GITHUB GIST SYNC) -->
+    <script>
+        // --- GITHUB GIST & OFFLINE-FIRST CONFIGURATION ---
+        // Secure Token Loader (Asks once and stores safely in your private browser memory)
+        let GIST_TOKEN = localStorage.getItem('oneminute_gist_token') || '';
+        if (!GIST_TOKEN) {
+            GIST_TOKEN = prompt('Please enter your GitHub Personal Access Token for cloud sync:');
+            if (GIST_TOKEN) {
+                localStorage.setItem('oneminute_gist_token', GIST_TOKEN.trim());
+            }
+        }
+        const GIST_FILENAME = 'oneminutetaxi_data.json';
+
+        let drivers = [];
+        let rides = [];
+        let payments = [];
+        let driverSettlements = [];
+        let clients = []; // Dedicated client database
+
+        let activeTab = 'dashboard';
+        let driverToDelete = null;
+        let cachedGistId = localStorage.getItem('oneminute_gist_id') || '';
+        let syncNeeded = false;
+
+        // Monitor internet connection status
+        window.addEventListener('online', () => {
+            console.log('Connection restored! Syncing offline changes to GitHub Gist...');
+            if (syncNeeded) {
+                saveData();
+            }
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('You are offline. Changes are being saved locally.');
+        });
+
+        // Load data (Offline-First: loads local cache instantly, syncs pending offline changes if online)
+        async function loadDataFromCloud() {
+            // 1. Load from local storage cache immediately so UI loads instantly offline
+            const localCache = localStorage.getItem('oneminute_taxi_offline_data');
+            if (localCache) {
+                try {
+                    const parsed = JSON.parse(localCache);
+                    drivers = parsed.drivers || [];
+                    rides = parsed.rides || [];
+                    payments = parsed.payments || [];
+                    driverSettlements = parsed.driverSettlements || [];
+                    clients = parsed.clients || [];
+                } catch (err) {
+                    console.warn('Could not parse local cache', err);
+                }
+            }
+
+            // 2. If online, fetch from GitHub Gist or push pending local changes
+            if (navigator.onLine) {
+                try {
+                    // Check if we saved changes while offline that haven't synced yet
+                    const pendingSync = localStorage.getItem('oneminute_sync_needed') === 'true';
+
+                    if (!cachedGistId) {
+                        const res = await fetch(`https://api.github.com/gists`, {
+                            headers: { 'Authorization': `token ${GIST_TOKEN}` }
+                        });
+                        const gists = await res.json();
+                        if (Array.isArray(gists)) {
+                            const target = gists.find(g => g.files && g.files[GIST_FILENAME]);
+                            if (target) {
+                                cachedGistId = target.id;
+                                localStorage.setItem('oneminute_gist_id', cachedGistId);
+                            }
+                        }
+                    }
+
+                    if (cachedGistId) {
+                        if (pendingSync) {
+                            // If we have offline changes waiting, push our local state UP to GitHub first!
+                            await saveData();
+                            localStorage.removeItem('oneminute_sync_needed');
+                        } else {
+                            // Otherwise, pull the latest from GitHub
+                            const res = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
+                                headers: { 'Authorization': `token ${GIST_TOKEN}` }
+                            });
+                            const gistData = await res.json();
+                            if (gistData && gistData.files && gistData.files[GIST_FILENAME]) {
+                                const parsed = JSON.parse(gistData.files[GIST_FILENAME].content);
+                                drivers = parsed.drivers || [];
+                                rides = parsed.rides || [];
+                                payments = parsed.payments || [];
+                                driverSettlements = parsed.driverSettlements || [];
+                                clients = parsed.clients || [];
+
+                                // Update local cache with fresh cloud data
+                                localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(parsed));
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('GitHub sync check failed, relying on offline local data', e);
+                }
+            }
+
+            switchTab('dashboard');
+        }
+
+        // Save data (Saves locally immediately, syncs to GitHub Gist if online)
+        async function saveData() {
+            const payload = { drivers, rides, payments, driverSettlements, clients };
+            const contentString = JSON.stringify(payload, null, 2);
+
+            // Always save to browser local storage first so offline work is never lost
+            localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(payload));
+
+            // If offline, flag that a sync is needed later and exit
+            if (!navigator.onLine) {
+                syncNeeded = true;
+                localStorage.setItem('oneminute_sync_needed', 'true');
+                console.log('Offline mode: Saved locally. Will sync when back online.');
+                return;
+            }
+
+            try {
+                if (cachedGistId) {
+                    // Update existing Gist
+                    await fetch(`https://api.github.com/gists/${cachedGistId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `token ${GIST_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            description: 'One Minute Taxi Dispatch Data Backup',
+                            files: {
+                                [GIST_FILENAME]: { content: contentString }
+                            }
+                        })
+                    });
+                } else {
+                    // Create a new private Gist if one doesn't exist yet
+                    const res = await fetch(`https://api.github.com/gists`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `token ${GIST_TOKEN}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            description: 'One Minute Taxi Dispatch Data Backup',
+                            public: false,
+                            files: {
+                                [GIST_FILENAME]: { content: contentString }
+                            }
+                        })
+                    });
+                    const newGist = await res.json();
+                    if (newGist && newGist.id) {
+                        cachedGistId = newGist.id;
+                        localStorage.setItem('oneminute_gist_id', cachedGistId);
+                    }
+                }
+                syncNeeded = false;
+            } catch (e) {
+                syncNeeded = true;
+                console.warn('Cloud sync failed, will retry when online:', e);
+            }
+        }
+
+        // --- BACKUP & RESTORE FUNCTIONS ---
+        function exportData() {
+            const data = { drivers, rides, payments, driverSettlements, exportedAt: new Date().toISOString() };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `oneminutetaxi_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.drivers && parsed.rides) {
+                        drivers = parsed.drivers;
+                        rides = parsed.rides;
+                        payments = parsed.payments || [];
+                        driverSettlements = parsed.driverSettlements || [];
+                        clients = parsed.clients || [];
+                        saveData();
+                        switchTab(activeTab);
+                        alert('Data successfully restored from backup!');
+                    } else {
+                        alert('Invalid backup file format.');
+                    }
+                } catch (err) {
+                    alert('Could not parse JSON file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- NAVIGATION CONTROLLER ---
+        function switchTab(tabName) {
+            activeTab = tabName;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            const tabs = ['dashboard', 'drivers', 'rides', 'tabs'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`nav-${t}`);
+                const mobBtn = document.getElementById(`mob-nav-${t}`);
+                if (t === tabName) {
+                    if (btn) btn.className = "px-4 py-2 rounded-lg transition-all bg-white text-brand-700 shadow-sm font-semibold";
+                    if (mobBtn) mobBtn.className = "flex flex-col items-center py-1.5 px-3 text-brand-600 text-xs font-semibold";
+                } else {
+                    if (btn) btn.className = "px-4 py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900 font-medium";
+                    if (mobBtn) mobBtn.className = "flex flex-col items-center py-1.5 px-3 text-slate-500 hover:text-brand-600 text-xs font-medium";
+                }
+            });
+
+            if (tabName === 'dashboard') renderDashboard();
+            if (tabName === 'drivers') renderDriverTab();
+            if (tabName === 'rides') renderRidesTable();
+            if (tabName === 'tabs') {
+                renderClientTabs();
+                renderClientPaymentHistory();
+            }
+        }
+
+        // --- CALCULATION LOGIC ENGINE ---
+        function calculateDriverMetrics(driverId) {
+            const driverRides = rides.filter(r => r.driverId === driverId && !r.driverSettled);
+
+            const totals = {
+                USD: { gross: 0, cash: 0, ToSamer: 0, whish: 0, tabUnpaid: 0, tabPaid: 0 },
+                LBP: { gross: 0, cash: 0, ToSamer: 0, whish: 0, tabUnpaid: 0, tabPaid: 0 }
+            };
+
+            driverRides.forEach(r => {
+                const cur = r.currency || 'USD';
+                const amt = parseFloat(r.amount) || 0;
+
+                if (r.type === 'Cash') {
+                    totals[cur].gross += amt;
+                    totals[cur].cash += amt;
+                } else if (r.type === 'To Samer') {
+                    totals[cur].gross += amt;
+                    totals[cur].ToSamer += amt; // Driver holds this physical cash, but gets 0% driver cut
+                } else if (r.type === 'Whish') {
+                    totals[cur].gross += amt;
+                    totals[cur].whish += amt;
+                } else if (r.type === 'On Tab') {
+                    totals[cur].gross += amt;
+                    if (r.tabStatus === 'Paid') {
+                        totals[cur].tabPaid += amt;
+                    } else {
+                        totals[cur].tabUnpaid += amt;
+                    }
+                }
+            });
+
+            const calculateBalance = (data) => {
+                // Driver 90% cut applies to Cash, Whish, and On Tab rides (NOT To Samer)
+                const splitEligibleGross = data.cash + data.whish + data.tabUnpaid + data.tabPaid;
+                const driverCut90 = splitEligibleGross * 0.90;
+
+                // Office 10% cut from splits + 100% of To Samer
+                const officeCut10 = (splitEligibleGross * 0.10) + data.ToSamer;
+
+                // Total physical cash in driver's hand = Cash rides + To Samer collections
+                const totalCashInHand = data.cash + data.ToSamer;
+
+                // Net settlement: Cash held by driver minus driver's 90% cut
+                const netSettlement = totalCashInHand - driverCut90;
+
+                return {
+                    gross: data.gross,
+                    cashInHand: totalCashInHand,
+                    whishInOwner: data.whish,
+                    tabUnpaid: data.tabUnpaid,
+                    driverCut90: driverCut90,
+                    officeCut10: officeCut10,
+                    netSettlement: netSettlement
+                };
+            };
+
+            return {
+                driverId,
+                USD: calculateBalance(totals.USD),
+                LBP: calculateBalance(totals.LBP),
+                rideCount: driverRides.length
+            };
+        }
+
+        // --- DASHBOARD RENDERER ---
+        function renderDashboard() {
+            let totalUSD = { gross: 0, cash: 0, whish: 0, tab: 0 };
+            let totalLBP = { gross: 0, cash: 0, whish: 0, tab: 0 };
+
+            // NEW: All-time lifetime accumulators
+            let lifetimeUSD = 0;
+            let lifetimeLBP = 0;
+
+            // Calculate all-time lifetime totals from every ride ever logged
+            rides.forEach(r => {
+                const amt = parseFloat(r.amount) || 0;
+                if (r.currency === 'USD') {
+                    lifetimeUSD += amt;
+                } else {
+                    lifetimeLBP += amt;
+                }
+            });
+
+            // Update All-Time Dashboard Elements
+            document.getElementById('dash-lifetime-gross-usd').innerText = `$${lifetimeUSD.toFixed(2)}`;
+            document.getElementById('dash-lifetime-office-usd').innerText = `$${(lifetimeUSD * 0.1).toFixed(2)}`;
+            document.getElementById('dash-lifetime-drivers-usd').innerText = `$${(lifetimeUSD * 0.9).toFixed(2)}`;
+
+            document.getElementById('dash-lifetime-gross-lbp').innerText = `LBP ${Math.round(lifetimeLBP).toLocaleString()}`;
+            document.getElementById('dash-lifetime-office-lbp').innerText = `LBP ${Math.round(lifetimeLBP * 0.1).toLocaleString()}`;
+            document.getElementById('dash-lifetime-drivers-lbp').innerText = `LBP ${Math.round(lifetimeLBP * 0.9).toLocaleString()}`;
+
+            drivers.forEach(d => {
+                const m = calculateDriverMetrics(d.id);
+                totalUSD.gross += m.USD.gross;
+                totalUSD.cash += m.USD.cashInHand;
+                totalUSD.whish += m.USD.whishInOwner;
+                totalUSD.tab += m.USD.tabUnpaid;
+
+                totalLBP.gross += m.LBP.gross;
+                totalLBP.cash += m.LBP.cashInHand;
+                totalLBP.whish += m.LBP.whishInOwner;
+                totalLBP.tab += m.LBP.tabUnpaid;
+            });
+
+            document.getElementById('dash-gross-usd').innerText = `$${totalUSD.gross.toFixed(2)}`;
+            document.getElementById('dash-office-usd').innerText = `$${(totalUSD.gross * 0.1).toFixed(2)}`;
+            document.getElementById('dash-drivers-cut-usd').innerText = `$${(totalUSD.gross * 0.9).toFixed(2)}`;
+
+            document.getElementById('dash-gross-lbp').innerText = `LBP ${Math.round(totalLBP.gross).toLocaleString()}`;
+            document.getElementById('dash-office-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.1).toLocaleString()}`;
+            document.getElementById('dash-drivers-cut-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.9).toLocaleString()}`;
+
+            document.getElementById('dash-cash-usd').innerText = `$${totalUSD.cash.toFixed(2)}`;
+            document.getElementById('dash-whish-usd').innerText = `$${totalUSD.whish.toFixed(2)}`;
+            document.getElementById('dash-tabs-usd').innerText = `$${totalUSD.tab.toFixed(2)}`;
+
+            document.getElementById('dash-cash-lbp').innerText = `LBP ${Math.round(totalLBP.cash).toLocaleString()}`;
+            document.getElementById('dash-whish-lbp').innerText = `LBP ${Math.round(totalLBP.whish).toLocaleString()}`;
+            document.getElementById('dash-tabs-lbp').innerText = `LBP ${Math.round(totalLBP.tab).toLocaleString()}`;
+
+            const driverContainer = document.getElementById('dashboard-driver-cards');
+            driverContainer.innerHTML = '';
+
+            drivers.forEach(driver => {
+                const m = calculateDriverMetrics(driver.id);
+                const card = document.createElement('div');
+                card.className = "border border-slate-200/90 rounded-xl p-4 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all";
+
+                let usdStatus = '';
+                if (m.USD.netSettlement > 0) {
+                    usdStatus = `<span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">Owes Office $${m.USD.netSettlement.toFixed(2)}</span>`;
+                } else if (m.USD.netSettlement < 0) {
+                    usdStatus = `<span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Office Owes $${Math.abs(m.USD.netSettlement).toFixed(2)}</span>`;
+                } else {
+                    usdStatus = `<span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">USD Settled</span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-bold text-slate-900 text-sm">${driver.name}</h4>
+                            <p class="text-[11px] text-slate-500">${m.rideCount} unsettled rides</p>
+                        </div>
+                        <button onclick="viewSpecificDriver('${driver.id}')" class="text-xs font-medium text-brand-600 hover:underline">
+                            Details &rarr;
+                        </button>
+                    </div>
+                    <div class="mt-2 pt-2 border-t border-slate-200/60 space-y-1">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">USD Balance:</span>
+                            ${usdStatus}
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">Cash in Hand:</span>
+                            <span class="font-medium text-slate-800">$${m.USD.cashInHand.toFixed(2)}</span>
+                        </div>
+                    </div>
+                `;
+                driverContainer.appendChild(card);
+            });
+
+            const recentBody = document.getElementById('dash-recent-rides-body');
+            recentBody.innerHTML = '';
+            const recentRides = [...rides].reverse().slice(0, 5);
+
+            if (recentRides.length === 0) {
+                recentBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No rides recorded yet.</td></tr>`;
+            } else {
+                recentRides.forEach(r => {
+                        const d = drivers.find(drv => drv.id === r.driverId);
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-slate-50/80 transition-colors";
+
+                        let badgeColor = r.type === 'Cash' ? 'bg-emerald-100 text-emerald-800' : (r.type === 'Whish' ? 'bg-purple-100 text-purple-800' : (r.type === 'To Samer' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'));
+                        if (r.type === 'On Tab' && r.tabStatus === 'Paid') {
+                            badgeColor = 'bg-emerald-100 text-emerald-800';
+                        }
+
+                        row.innerHTML = `
+                            <td class="p-3 text-slate-500">${new Date(r.date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                            <td class="p-3 font-semibold text-slate-800">${d ? d.name : 'Unknown Driver'}</td>
+                            <td class="p-3"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${badgeColor}">${r.type}${r.type === 'On Tab' && r.tabStatus === 'Paid' ? ' (Paid)' : ''}</span></td>
+                            <td class="p-3 text-slate-600">${r.from} &rarr; ${r.to}</td>
+                            <td class="p-3 text-slate-500">${r.type === 'On Tab' ? `<strong class="text-brand-700">${r.client || 'Client Tab'}</strong>` : (r.note || '-')}</td>
+                            <td class="p-3 text-xs text-slate-500 italic max-w-xs truncate">${r.note || '-'}</td>
+                            <td class="p-3 text-right font-bold text-slate-900">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
+                        `;
+                        recentBody.appendChild(row);
+                    });
+            }
+        }
+
+        // --- DRIVER TAB RENDERER ---
+        function renderDriverTab() {
+            const select = document.getElementById('driver-select-filter');
+            const currentSelected = select.value || 'all';
+            select.innerHTML = `<option value="all">-- All Drivers Overview --</option>`;
+            drivers.forEach(d => {
+                select.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+            });
+            select.value = currentSelected;
+
+            const container = document.getElementById('driver-detail-container');
+            container.innerHTML = '';
+
+            const selectedDriverId = select.value;
+            const driversToDisplay = selectedDriverId === 'all' ? drivers : drivers.filter(d => d.id === selectedDriverId);
+
+            if (driversToDisplay.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">No drivers available.</div>`;
+                return;
+            }
+
+            driversToDisplay.forEach(driver => {
+                const m = calculateDriverMetrics(driver.id);
+                const driverRides = rides.filter(r => r.driverId === driver.id);
+
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden p-4 sm:p-6 space-y-6";
+
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-slate-100">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                                ${driver.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">${driver.name}</h3>
+                                <p class="text-xs text-slate-500">${driver.phone || 'No Phone Registered'} &bull; ${m.rideCount} unsettled rides (${driverRides.length} total logged)</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="openAddRideForDriver('${driver.id}')" class="bg-brand-50 hover:bg-brand-100 text-brand-700 font-semibold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center">
+                                <i class="fa-solid fa-plus mr-1"></i> Add Ride
+                            </button>
+                            <button onclick="downloadDriverInvoicePDF('${driver.id}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-all shadow-sm flex items-center">
+                                <i class="fa-solid fa-file-pdf mr-1.5"></i> PDF Invoice
+                            </button>
+                            <button onclick="openSettleDriverModal('${driver.id}', '${driver.name}', ${m.USD.netSettlement}, ${m.LBP.netSettlement})" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-all shadow-sm flex items-center">
+                                <i class="fa-solid fa-hand-holding-dollar mr-1.5"></i> Settle Driver Balance
+                            </button>
+                            <button onclick="promptDeleteDriver('${driver.id}', '${driver.name}')" class="text-xs text-red-500 hover:text-red-700 font-medium px-3 py-2 rounded-xl border border-red-100 hover:bg-red-50 transition-all flex items-center">
+                                <i class="fa-solid fa-trash-can mr-1.5"></i> Delete
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- USD Calculation Box -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3">
+                            <div class="flex justify-between items-center border-b border-slate-200 pb-2">
+                                <span class="font-bold text-xs uppercase text-slate-600 tracking-wider"><i class="fa-solid fa-dollar-sign text-emerald-600 mr-1"></i> USD Settlement</span>
+                                <span class="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">USD</span>
+                            </div>
+                            <div class="space-y-1.5 text-xs text-slate-600">
+                                <div class="flex justify-between"><span>Unsettled USD Gross:</span> <strong class="text-slate-900">$${m.USD.gross.toFixed(2)}</strong></div>
+                                <div class="flex justify-between"><span>Driver 90% Cut:</span> <span class="font-semibold text-emerald-700">$${m.USD.driverCut90.toFixed(2)}</span></div>
+                                <div class="flex justify-between"><span>Office 10% Cut:</span> <span class="font-semibold text-slate-700">$${m.USD.officeCut10.toFixed(2)}</span></div>
+                                <div class="flex justify-between pt-1 border-t border-slate-200">
+                                    <span>Physical Cash in Hand:</span>
+                                    <strong class="text-emerald-700">$${m.USD.cashInHand.toFixed(2)}</strong>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Whish in Owner Account:</span>
+                                    <strong class="text-purple-700">$${m.USD.whishInOwner.toFixed(2)}</strong>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-slate-200">
+                                ${m.USD.netSettlement > 0 ? `
+                                    <div class="p-2.5 rounded-lg bg-amber-100/70 text-amber-900 text-xs font-semibold flex justify-between items-center">
+                                        <span><i class="fa-solid fa-hand-holding-dollar mr-1.5"></i>Driver Owes Owner:</span>
+                                        <span class="text-sm font-extrabold">$${m.USD.netSettlement.toFixed(2)}</span>
+                                    </div>
+                                ` : (m.USD.netSettlement < 0 ? `
+                                    <div class="p-2.5 rounded-lg bg-emerald-100/70 text-emerald-900 text-xs font-semibold flex justify-between items-center">
+                                        <span><i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center mr-1.5"></i>Owner Owes Driver:</span>
+                                        <span class="text-sm font-extrabold">$${Math.abs(m.USD.netSettlement).toFixed(2)}</span>
+                                    </div>
+                                ` : `
+                                    <div class="p-2 rounded-lg bg-slate-200/60 text-slate-700 text-xs font-medium text-center">USD Account Fully Settled</div>
+                                `)}
+                            </div>
+                        </div>
+
+                        <!-- LBP Calculation Box -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-3">
+                            <div class="flex justify-between items-center border-b border-slate-200 pb-2">
+                                <span class="font-bold text-xs uppercase text-slate-600 tracking-wider"><i class="fa-solid fa-money-bill-wave text-blue-600 mr-1"></i> LBP Settlement</span>
+                                <span class="text-[11px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">LBP</span>
+                            </div>
+                            <div class="space-y-1.5 text-xs text-slate-600">
+                                <div class="flex justify-between"><span>Unsettled LBP Gross:</span> <strong class="text-slate-900">LBP ${Math.round(m.LBP.gross).toLocaleString()}</strong></div>
+                                <div class="flex justify-between"><span>Driver 90% Cut:</span> <span class="font-semibold text-emerald-700">LBP ${Math.round(m.LBP.driverCut90).toLocaleString()}</span></div>
+                                <div class="flex justify-between"><span>Office 10% Cut:</span> <span class="font-semibold text-slate-700">LBP ${Math.round(m.LBP.officeCut10).toLocaleString()}</span></div>
+                                <div class="flex justify-between pt-1 border-t border-slate-200">
+                                    <span>Physical Cash in Hand:</span>
+                                    <strong class="text-emerald-700">LBP ${Math.round(m.LBP.cashInHand).toLocaleString()}</strong>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>Whish in Owner Account:</span>
+                                    <strong class="text-purple-700">LBP ${Math.round(m.LBP.whishInOwner).toLocaleString()}</strong>
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-slate-200">
+                                ${m.LBP.netSettlement > 0 ? `
+                                    <div class="p-2.5 rounded-lg bg-amber-100/70 text-amber-900 text-xs font-semibold flex justify-between items-center">
+                                        <span><i class="fa-solid fa-hand-holding-dollar mr-1.5"></i>Driver Owes Owner:</span>
+                                        <span class="text-sm font-extrabold">LBP ${Math.round(m.LBP.netSettlement).toLocaleString()}</span>
+                                    </div>
+                                ` : (m.LBP.netSettlement < 0 ? `
+                                    <div class="p-2.5 rounded-lg bg-emerald-100/70 text-emerald-900 text-xs font-semibold flex justify-between items-center">
+                                        <span><i class="fa-solid fa-arrow-down-left-and-arrow-up-right-to-center mr-1.5"></i>Owner Owes Driver:</span>
+                                        <span class="text-sm font-extrabold">LBP ${Math.round(Math.abs(m.LBP.netSettlement)).toLocaleString()}</span>
+                                    </div>
+                                ` : `
+                                    <div class="p-2 rounded-lg bg-slate-200/60 text-slate-700 text-xs font-medium text-center">LBP Account Fully Settled</div>
+                                `)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Individual Driver's Ride List -->
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Driver Ride History</h4>
+                        <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                            <table class="w-full text-left text-xs text-slate-600">
+                                <thead class="bg-slate-100/70 text-slate-500 uppercase font-semibold text-[10px]">
+                                    <tr>
+                                        <th class="p-2.5">Date</th>
+                                        <th class="p-2.5">Type & Status</th>
+                                        <th class="p-2.5">Route</th>
+                                        <th class="p-2.5">Client / Details</th>
+                                        <th class="p-2.5 text-right">Gross Fare</th>
+                                        <th class="p-2.5 text-right">Driver Cut (90%)</th>
+                                        <th class="p-2.5 text-center">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    ${driverRides.length === 0 ? `<tr><td colspan="7" class="p-4 text-center text-slate-400">No rides logged for this driver.</td></tr>` :
+                                    driverRides.map(r => `
+                                        <tr class="hover:bg-slate-50 ${r.driverSettled ? 'bg-slate-50/60 text-slate-400' : ''}">
+                                            <td class="p-2.5 whitespace-nowrap">${new Date(r.date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                                            <td class="p-2.5">
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.type === 'Cash' ? 'bg-emerald-100 text-emerald-800' : (r.type === 'Whish' ? 'bg-purple-100 text-purple-800' : (r.type === 'To Samer' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'))}">${r.type}</span>
+                                                ${r.driverSettled ? '<span class="ml-1 px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded text-[9px] font-semibold">Driver Settled</span>' : ''}
+                                                ${r.type === 'On Tab' && r.tabStatus === 'Paid' ? '<span class="ml-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[9px] font-semibold">Client Paid</span>' : ''}
+                                            </td>
+                                            <td class="p-2.5 font-medium ${r.driverSettled ? 'text-slate-400' : 'text-slate-700'}">
+                                                <div>${r.from} &rarr; ${r.to}</div>
+                                                ${r.note ? `<div class="text-[11px] text-slate-500 italic mt-0.5"><i class="fa-regular fa-note-sticky mr-1 text-slate-400"></i>${r.note}</div>` : ''}
+                                            </td>
+                                            <td class="p-2.5">${r.type === 'On Tab' ? `<strong class="text-brand-700">${r.client || 'Client Tab'}</strong>` : (r.note || '-')}</td>
+                                            <td class="p-2.5 text-right font-semibold ${r.driverSettled ? 'text-slate-400' : 'text-slate-800'}">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
+                                            <td class="p-2.5 text-right font-medium text-emerald-600">${r.currency === 'USD' ? '$' : 'LBP '}${((r.type === 'To Samer') ? 0 : parseFloat(r.amount) * 0.9).toLocaleString()}</td>
+
+                                            <td class="p-2.5 text-center">
+                                                <button onclick="deleteRide('${r.id}')" class="text-slate-400 hover:text-red-600 p-1 transition-colors" title="Delete Ride">
+                                                    <i class="fa-solid fa-trash-can"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function viewSpecificDriver(driverId) {
+            switchTab('drivers');
+            const select = document.getElementById('driver-select-filter');
+            select.value = driverId;
+            renderDriverTab();
+        }
+
+        // --- RIDES TABLE RENDERER ---
+        function renderRidesTable() {
+            const searchQuery = (document.getElementById('rides-search-input').value || '').toLowerCase();
+            const tableBody = document.getElementById('all-rides-table-body');
+            tableBody.innerHTML = '';
+
+            const filteredRides = rides.filter(r => {
+                const driver = drivers.find(d => d.id === r.driverId);
+                const driverName = driver ? driver.name.toLowerCase() : '';
+                const route = `${r.from} ${r.to}`.toLowerCase();
+                const client = (r.client || '').toLowerCase();
+                return driverName.includes(searchQuery) || route.includes(searchQuery) || client.includes(searchQuery);
+            });
+
+            if (filteredRides.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">No matching rides found.</td></tr>`;
+                return;
+            }
+
+            [...filteredRides].reverse().forEach(r => {
+                const d = drivers.find(drv => drv.id === r.driverId);
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-50 transition-colors";
+
+                let typeBadge = r.type === 'Cash' ? 'bg-emerald-100 text-emerald-800' : (r.type === 'Whish' ? 'bg-purple-100 text-purple-800' : (r.type === 'To Samer' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'));
+
+                row.innerHTML = `
+                    <td class="p-3.5 text-slate-500 whitespace-nowrap">${new Date(r.date).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                    <td class="p-3.5 font-bold text-slate-800">${d ? d.name : 'Unknown Driver'}</td>
+                    <td class="p-3.5"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${typeBadge}">${r.type}</span></td>
+                    <td class="p-3.5 text-slate-700 font-medium">${r.from} &rarr; ${r.to}</td>
+                    <td class="p-3.5 text-slate-500">${r.type === 'On Tab' ? `<strong class="text-brand-700">${r.client || 'Client Tab'}</strong>` : (r.note || '-')}</td>
+                    <td class="p-3.5 text-xs text-slate-500 italic max-w-xs truncate">${r.note || '-'}</td>
+                    <td class="p-3.5 text-right font-extrabold text-slate-900">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
+                    <td class="p-3.5 text-center">${getRideStatusBadge(r)}</td>
+                    <td class="p-3.5 text-center space-x-1 whitespace-nowrap">
+                        <button onclick="openEditRideModal('${r.id}')" class="text-slate-400 hover:text-brand-600 p-1.5 transition-colors" title="Edit Ride">
+                            <i class="fa-solid fa-pen-to-square text-sm"></i>
+                        </button>
+                        <button onclick="deleteRide('${r.id}')" class="text-slate-400 hover:text-red-600 p-1.5 transition-colors" title="Delete Ride">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Track currently selected client for drill-down view
+        let selectedClientDetail = null;
+
+        // Safe fallback helper for exchange rate
+        if (typeof getExchangeRate !== 'function') {
+            window.getExchangeRate = function() {
+                const input = document.getElementById('exchange-rate-input');
+                return input ? (parseFloat(input.value) || 90000) : 90000;
+            };
+        }
+
+        function renderClientTabs() {
+            try {
+                const statusFilterElem = document.getElementById('tab-status-filter');
+                const filter = statusFilterElem ? statusFilterElem.value : 'all';
+
+                const searchInputElem = document.getElementById('client-search-input');
+                const searchQuery = searchInputElem ? searchInputElem.value.toLowerCase() : '';
+
+                const grid = document.getElementById('client-tabs-grid');
+                if (!grid) return;
+                grid.innerHTML = '';
+
+                const tabRides = (typeof rides !== 'undefined' && Array.isArray(rides)) ? rides.filter(r => r.type === 'On Tab') : [];
+                const clientsMap = {};
+
+                if (typeof clients !== 'undefined' && Array.isArray(clients)) {
+                    clients.forEach(c => {
+                        const name = c.name || 'Unnamed';
+                        clientsMap[name.toLowerCase()] = {
+                            client: name,
+                            phone: c.phone || '',
+                            USD: 0,
+                            LBP: 0,
+                            rides: []
+                        };
+                    });
+                }
+
+                tabRides.forEach(r => {
+                    const clientName = r.client || 'Unspecified Client';
+                    const key = clientName.toLowerCase();
+                    if (!clientsMap[key]) {
+                        clientsMap[key] = { client: clientName, phone: '', USD: 0, LBP: 0, rides: [] };
+                    }
+                    clientsMap[key].rides.push(r);
+                });
+
+                const rate = getExchangeRate();
+
+                // Calculate true remaining balances virtually (NO MUTATING r.tabStatus)
+                Object.values(clientsMap).forEach(c => {
+                    c.rides.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    c.rides.forEach(r => {
+                        let rideRem = getRideRemainingUSD(r);
+                        if (r.tabStatus !== 'Paid' && rideRem > 0.01) {
+                            if (r.currency === 'USD') {
+                                c.USD += rideRem;
+                            } else {
+                                c.LBP += (rideRem * rate);
+                            }
+                        }
+                    });
+                });
+
+                const clientEntries = Object.values(clientsMap).filter(c => {
+                    return c.client.toLowerCase().includes(searchQuery);
+                }).sort((a, b) => a.client.localeCompare(b.client, undefined, { sensitivity: 'base' }));
+
+                if (clientEntries.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">No clients found. Click "+ Add Client" to create one.</div>`;
+                    return;
+                }
+
+                if (selectedClientDetail) {
+                    const c = clientEntries.find(entry => entry.client.toLowerCase() === selectedClientDetail.toLowerCase());
+                    if (!c) {
+                        selectedClientDetail = null;
+                        renderClientTabs();
+                        return;
+                    }
+
+                    const pendingCount = c.rides.filter(r => r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01).length;
+
+                    grid.innerHTML = `
+                        <div class="col-span-full mb-2 flex justify-between items-center">
+                            <button onclick="selectedClientDetail = null; renderClientTabs();" class="text-xs font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 px-3 py-2 rounded-xl transition-all flex items-center w-fit">
+                                <i class="fa-solid fa-arrow-left mr-2"></i> Back to All Clients Directory
+                            </button>
+                            <button onclick="openEditClientModal('${c.client.replace(/'/g, "\\'")}')" class="text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition-all flex items-center">
+                                <i class="fa-solid fa-pen-to-square mr-1.5"></i> Edit Client Info
+                            </button>
+                        </div>
+                    `;
+
+                    const card = document.createElement('div');
+                    card.className = "col-span-full bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm space-y-4";
+
+                    let clientRidesHTML = c.rides.map(r => {
+                        const originalCost = parseFloat(r.amount || 0);
+                        const currencySymbol = r.currency === 'USD' ? '$' : 'LBP ';
+                        return `
+                            <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                <div>
+                                    <span class="font-semibold text-slate-800">${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}</span>
+                                    <span class="block text-[10px] text-slate-400">${new Date(r.date).toLocaleDateString()}</span>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <div class="text-right">
+                                        <span class="font-bold text-slate-900">${currencySymbol}${originalCost.toLocaleString()}</span>
+                                    </div>
+                                    <div>${getRideStatusBadge(r)}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-lg">${c.client}</h3>
+                                <p class="text-xs text-slate-500">${c.phone ? 'Phone: ' + c.phone + ' &bull; ' : ''} ${c.rides.length} Total Rides</p>
+                            </div>
+                            <div class="text-right flex items-center space-x-3">
+                                <div>
+                                    <span class="text-xs text-slate-400 block">Unpaid USD Total</span>
+                                    <strong class="text-amber-600 text-lg">$${c.USD.toFixed(2)}</strong>
+                                </div>
+                                <button onclick="openPaymentModalForClient('${c.client.replace(/'/g, "\\'")}')" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold text-xs shadow-md transition-all flex items-center">
+                                    <i class="fa-solid fa-plus mr-1.5"></i> New Payment
+                                </button>
+                                <button onclick="downloadClientInvoicePDF('${c.client.replace(/'/g, "\\'")}')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-xs shadow-md transition-all flex items-center">
+                                    <i class="fa-solid fa-file-pdf mr-1.5"></i> Download Invoice PDF
+                                </button>
+                                <button onclick="sendClientInvoiceWhatsApp('${c.client.replace(/'/g, "\\'")}')" class="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold text-xs shadow-md transition-all flex items-center" title="Send via WhatsApp">
+                                <i class="fa-brands fa-whatsapp mr-1.5 text-sm"></i> Send
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <h4 class="font-bold text-slate-700 uppercase text-[10px] tracking-wider mb-2">Ride History & Tabs</h4>
+                            ${clientRidesHTML || '<p class="text-slate-400">No rides found for this client.</p>'}
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                    return;
+                }
+
+                const directoryContainer = document.createElement('div');
+                directoryContainer.className = "col-span-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden";
+
+                let listHTML = `
+                    <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <div>
+                            <h3 class="font-bold text-slate-900 text-sm">Client Directory (${clientEntries.length} Clients)</h3>
+                            <p class="text-xs text-slate-500">Click any client name to view active tabs, history, or edit details.</p>
+                        </div>
+                    </div>
+                    <div class="divide-y divide-slate-100">
+                `;
+
+                let visibleCount = 0;
+                clientEntries.forEach(c => {
+                    const pendingCount = c.rides.filter(r => r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01).length;
+
+                    if (filter === 'unpaid' && pendingCount === 0 && c.rides.length > 0) return;
+                    if (filter === 'paid' && (pendingCount > 0 || c.rides.length === 0)) return;
+
+                    visibleCount++;
+                    listHTML += `
+                        <div class="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between">
+                            <div onclick="selectedClientDetail = '${c.client.replace(/'/g, "\\'")}'; renderClientTabs();" class="flex items-center space-x-3 cursor-pointer flex-1">
+                                <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 font-bold flex items-center justify-center text-sm">
+                                    ${c.client.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-900 text-sm hover:text-brand-600 transition-colors">${c.client} ${c.phone ? `<span class="text-xs font-normal text-slate-400">(${c.phone})</span>` : ''}</h4>
+                                    <p class="text-xs text-slate-500">${c.rides.length} Total Rides &bull; Unpaid USD: <strong class="text-amber-600">$${c.USD.toFixed(2)}</strong></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                                    ${pendingCount > 0 ? `${pendingCount} Pending` : (c.rides.length > 0 ? 'All Settled' : 'Registered Client')}
+                                </span>
+                                <button onclick="openEditClientModal('${c.client.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-slate-700 p-2 text-xs" title="Edit Client">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <i onclick="selectedClientDetail = '${c.client.replace(/'/g, "\\'")}'; renderClientTabs();" class="fa-solid fa-chevron-right text-slate-400 text-xs cursor-pointer"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (visibleCount === 0) {
+                    listHTML += `<div class="p-8 text-center text-slate-400">No clients match the selected filter option.</div>`;
+                }
+
+                listHTML += `</div>`;
+                directoryContainer.innerHTML = listHTML;
+                grid.appendChild(directoryContainer);
+            } catch (err) {
+                console.error("Error rendering client tabs:", err);
+            }
+        }
+
+        // Function to build Client Card with PDF Download Button at the Top Right
+function buildClientCardHTML(c, pendingCount) {
+    const pendingRides = c.rides.filter(r => r.tabStatus !== 'Paid');
+
+    return `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+            <div>
+                <h3 class="font-bold text-slate-900 text-xl">${c.client}</h3>
+                <p class="text-xs text-slate-500">${c.rides.length} Total Rides (${pendingRides.length} Unsettled)</p>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="downloadClientInvoicePDF('${c.client.replace(/'/g, "\\'")}')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center">
+                    <i class="fa-solid fa-file-pdf mr-2"></i> Download Invoice PDF
+                </button>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                    ${pendingCount > 0 ? `${pendingCount} Pending` : 'All Settled'}
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+            <div class="flex justify-between font-semibold">
+                <span class="text-slate-500">Unpaid USD Total:</span>
+                <span class="text-amber-600 font-bold text-sm">$${c.USD.toFixed(2)}</span>
+            </div>
+            <div class="flex justify-between font-semibold">
+                <span class="text-slate-500">Unpaid LBP Total:</span>
+                <span class="text-amber-600 font-bold text-sm">LBP ${Math.round(c.LBP).toLocaleString()}</span>
+            </div>
+        </div>
+
+        <div class="space-y-2 pt-2">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ride Details & History</p>
+            <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[10px]">
+                        <tr>
+                            <th class="p-3">Date</th>
+                            <th class="p-3">Route (From &rarr; To)</th>
+                            <th class="p-3">Status</th>
+                            <th class="p-3 text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${c.rides.map(r => `
+                            <tr class="${r.tabStatus === 'Paid' ? 'bg-slate-50/50 text-slate-400' : ''}">
+                                <td class="p-3">${new Date(r.date).toLocaleDateString()}</td>
+                                <td class="p-3 font-medium text-slate-700">
+                                    <div>${r.from || 'Direct Ride'} &rarr; ${r.to || 'Destination'}</div>
+                                    ${r.note ? `<div class="text-[11px] text-slate-500 italic mt-0.5"><i class="fa-regular fa-note-sticky mr-1 text-slate-400"></i>${r.note}</div>` : ''}
+                                </td>
+                                <td class="p-3">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.tabStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                        ${r.tabStatus === 'Paid' ? 'PAID' : 'PENDING'}
+                                    </span>
+                                </td>
+                                <td class="p-3 text-right font-bold text-slate-900">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+// Function to generate and trigger the PDF download for Client Invoice
+async function downloadClientInvoicePDF(clientName) {
+    if (typeof html2pdf === 'undefined') {
+        alert('PDF library is still loading or blocked. Please check your internet connection and try again in a moment.');
+        return;
+    }
+
+    const rate = getExchangeRate();
+    const allClientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
+
+    // Keep rides that still have an unpaid remaining balance > 0.01
+    const tabRides = allClientRides.filter(r => {
+        if (r.tabStatus === 'Paid') return false;
+        return getRideRemainingUSD(r) > 0.01;
+    });
+
+    if (tabRides.length === 0) {
+        alert(`No unsettled rides found for ${clientName} to generate an invoice.`);
+        return;
+    }
+
+    let usdTotalDue = 0;
+    tabRides.forEach(r => {
+        usdTotalDue += getRideRemainingUSD(r);
+    });
+
+    const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Build styled HTML template for the PDF
+    const element = document.createElement('div');
+    element.innerHTML = `
+        <div style="font-family: 'Inter', sans-serif; max-width: 800px; margin: auto; padding: 20px; color: #1e293b; background-color: #ffffff;">
+            <!-- Header with Logo and Title -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 16px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="https://oneminutetaxi.com/wp-content/uploads/2024/03/cropped-logo-01-2.png" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;" crossorigin="anonymous" alt="Logo">
+                    <div>
+                        <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
+                        <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Dispatch & Client Billing</p>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <h2 style="font-size: 18px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Invoice</h2>
+                    <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">Date: ${todayDate}</p>
+                </div>
+            </div>
+
+            <!-- Client Info Box -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 4px 0;">Billed To:</p>
+                <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
+                <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">${tabRides.length} Outstanding Unsettled Ride(s)</p>
+            </div>
+
+            <!-- Rides Table -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px;">
+                <thead>
+                    <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 10px; font-weight: 700; text-align: left;">
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1;">Date</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1;">Route Details</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Original Cost</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Paid / Credited</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Balance Due</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tabRides.map(r => {
+                        const originalCostUSD = parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1);
+                        const remUSD = getRideRemainingUSD(r);
+                        const paidUSD = originalCostUSD - remUSD;
+
+                        return `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 10px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
+                                <td style="padding: 10px; font-weight: 600; color: #1e293b; vertical-align: top;">
+                                    <div>${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}</div>
+                                    ${r.note ? `<div style="font-size: 10px; color: #64748b; font-style: italic; font-weight: normal; margin-top: 2px;">Note: ${r.note}</div>` : ''}
+                                </td>
+                                <td style="padding: 10px; text-align: right; color: #475569; vertical-align: top;">$${originalCostUSD.toFixed(2)}</td>
+                                <td style="padding: 10px; text-align: right; color: #16a34a; vertical-align: top;">${paidUSD > 0.01 ? '-$' + paidUSD.toFixed(2) : '$0.00'}</td>
+                                <td style="padding: 10px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${remUSD.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+
+            <!-- Totals Section -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
+                <div style="width: 300px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: #15803d;">
+                        <span>Total USD Balance Due:</span>
+                        <span>$${usdTotalDue.toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="border-top: 1px solid #e2e8f0; paddingTop: 16px; text-align: center; font-size: 10px; color: #94a3b8;">
+                <p style="margin: 0;">Thank you for choosing One Minute Taxi &bull; For inquiries, contact dispatch hub.</p>
+            </div>
+        </div>
+    `;
+
+    const opt = {
+        margin:       0.3,
+        filename:     `Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    try {
+        await html2pdf().set(opt).from(element).save();
+    } catch (err) {
+        console.error('PDF Generation Error:', err);
+        alert('Could not generate PDF. Please check console for details.');
+    }
+}
+
+        // --- ADD RIDE DRIVER AUTOCOMPLETE ---
+        function filterDriverDropdown(query) {
+        const dropdown = document.getElementById('driver-autocomplete-dropdown');
+        const hiddenInput = document.getElementById('modal-ride-driver-id');
+        hiddenInput.value = ''; // Reset until selected
+
+        if (!query.trim()) {
+        dropdown.classList.add('hidden');
+        return;
+        }
+
+        const matches = drivers.filter(d => d.name.toLowerCase().includes(query.toLowerCase()));
+        if (matches.length === 0) {
+        dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 italic">No matching drivers found.</div>`;
+        dropdown.classList.remove('hidden');
+        return;
+        }
+
+        dropdown.innerHTML = '';
+        matches.forEach(d => {
+        const item = document.createElement('div');
+        item.className = "p-2.5 hover:bg-slate-100 cursor-pointer text-xs flex justify-between items-center transition";
+        item.innerHTML = `<span><strong>${d.name}</strong></span> <span class="text-slate-400">${d.phone || ''}</span>`;
+        item.onclick = function() {
+            document.getElementById('modal-ride-driver-search').value = d.name;
+            hiddenInput.value = d.id;
+            dropdown.classList.add('hidden');
+        };
+        dropdown.appendChild(item);
+        });
+        dropdown.classList.remove('hidden');
+        }
+
+        // --- EDIT RIDE DRIVER AUTOCOMPLETE ---
+        function filterEditDriverDropdown(query) {
+        const dropdown = document.getElementById('edit-driver-autocomplete-dropdown');
+        const hiddenInput = document.getElementById('edit-ride-driver-id');
+        hiddenInput.value = '';
+
+        if (!query.trim()) {
+        dropdown.classList.add('hidden');
+        return;
+        }
+
+        const matches = drivers.filter(d => d.name.toLowerCase().includes(query.toLowerCase()));
+        if (matches.length === 0) {
+        dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 italic">No matching drivers found.</div>`;
+        dropdown.classList.remove('hidden');
+        return;
+        }
+
+        dropdown.innerHTML = '';
+        matches.forEach(d => {
+        const item = document.createElement('div');
+        item.className = "p-2.5 hover:bg-slate-100 cursor-pointer text-xs flex justify-between items-center transition";
+        item.innerHTML = `<span><strong>${d.name}</strong></span> <span class="text-slate-400">${d.phone || ''}</span>`;
+        item.onclick = function() {
+            document.getElementById('edit-ride-driver-search').value = d.name;
+            hiddenInput.value = d.id;
+            dropdown.classList.add('hidden');
+        };
+        dropdown.appendChild(item);
+        });
+        dropdown.classList.remove('hidden');
+        }
+
+        function filterClientDropdown(query) {
+            const dropdown = document.getElementById('client-autocomplete-dropdown');
+            const hiddenInput = document.getElementById('modal-ride-client');
+            hiddenInput.value = ''; // Reset until selected
+
+            if (!query.trim()) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            const matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 italic">No matching clients found. Add them in the Clients tab first.</div>`;
+                dropdown.classList.remove('hidden');
+                return;
+            }
+
+            dropdown.innerHTML = '';
+            matches.forEach(c => {
+                const item = document.createElement('div');
+                item.className = "p-2.5 hover:bg-slate-100 cursor-pointer text-xs flex justify-between items-center transition";
+                item.innerHTML = `<span><strong>${c.name}</strong></span> <span class="text-slate-400">${c.phone || ''}</span>`;
+                item.onclick = function() {
+                    document.getElementById('modal-ride-client-search').value = c.name;
+                    hiddenInput.value = c.name;
+                    dropdown.classList.add('hidden');
+                };
+                dropdown.appendChild(item);
+            });
+            dropdown.classList.remove('hidden');
+        }
+
+        function openAddClientModal() {
+            document.getElementById('new-client-name').value = '';
+            document.getElementById('new-client-phone').value = '';
+            document.getElementById('add-client-modal').classList.remove('hidden');
+        }
+
+        function handleSaveNewClient(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-client-name').value.trim();
+            const phone = document.getElementById('new-client-phone').value.trim();
+
+            if (!name) return;
+
+            if (!clients) clients = [];
+            clients.push({ id: 'c_' + Date.now(), name, phone });
+            saveData();
+            closeModal('add-client-modal');
+            renderClientTabs();
+        }
+
+        function openEditClientModal(clientName) {
+            const clientObj = clients.find(c => c.name === clientName) || { name: clientName, phone: '' };
+            document.getElementById('edit-client-original-name').value = clientName;
+            document.getElementById('edit-client-name').value = clientObj.name;
+            document.getElementById('edit-client-phone').value = clientObj.phone || '';
+            document.getElementById('edit-client-modal').classList.remove('hidden');
+        }
+
+        function handleUpdateClient(e) {
+            e.preventDefault();
+            const originalName = document.getElementById('edit-client-original-name').value;
+            const newName = document.getElementById('edit-client-name').value.trim();
+            const newPhone = document.getElementById('edit-client-phone').value.trim();
+
+            if (!newName) return;
+
+            // Update client in clients database
+            let clientObj = clients.find(c => c.name === originalName);
+            if (clientObj) {
+                clientObj.name = newName;
+                clientObj.phone = newPhone;
+            } else {
+                clients.push({ id: 'c_' + Date.now(), name: newName, phone: newPhone });
+            }
+
+            // Update existing historical rides if name changed
+            if (originalName !== newName) {
+                rides.forEach(r => {
+                    if (r.client === originalName) r.client = newName;
+                });
+            }
+
+            saveData();
+            closeModal('edit-client-modal');
+            renderClientTabs();
+        }
+
+        // --- CLIENT PAYMENT MODAL & HISTORY LOGIC ---
+
+        function getModalExchangeRate() {
+            const input = document.getElementById('payment-exchange-rate');
+            return input ? (parseFloat(input.value) || 90000) : 90000;
+        }
+
+        // Helper to calculate total unpaid USD per client (converting any legacy LBP rides using active rate)
+        function getClientUnpaidBalances() {
+            const map = {};
+            const rate = getExchangeRate();
+
+            // Find all unique On Tab clients
+            const clientNames = [...new Set(rides.filter(r => r.type === 'On Tab' && r.client).map(r => r.client.trim()))];
+
+            clientNames.forEach(clientName => {
+                const clientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.toLowerCase());
+                clientRides.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                let totalUnpaidUSD = 0;
+                clientRides.forEach(r => {
+                    const rem = getRideRemainingUSD(r);
+                    if (r.tabStatus !== 'Paid' && rem > 0.01) {
+                        totalUnpaidUSD += rem;
+                    }
+                });
+
+                if (totalUnpaidUSD > 0.01) {
+                    map[clientName] = totalUnpaidUSD;
+                }
+            });
+
+            return map;
+        }
+
+        function openNewPaymentModal() {
+            const select = document.getElementById('payment-client-select');
+            select.innerHTML = '<option value="">-- Choose Client --</option>';
+
+            // Set exchange rate input in modal to current global exchange rate
+            const globalRateInput = document.getElementById('exchange-rate-input');
+            const currentRate = globalRateInput ? (globalRateInput.value || '90000') : '90000';
+            document.getElementById('payment-exchange-rate').value = currentRate;
+
+            // Populate dropdown with ONLY clients who have active/unpaid rides
+            const unpaidBalances = getClientUnpaidBalances();
+            const clientsWithTabs = Object.keys(unpaidBalances).filter(name => unpaidBalances[name] > 0).sort();
+
+            clientsWithTabs.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = `${name} ($${unpaidBalances[name].toFixed(2)} Due)`;
+                select.appendChild(opt);
+            });
+
+            document.getElementById('payment-amount-paid').value = '';
+            document.getElementById('payment-note').value = '';
+            document.getElementById('payment-pending-summary').textContent = 'Select a client above';
+            document.getElementById('modal-new-payment').classList.remove('hidden');
+        }
+
+        function updateClientPendingBalance() {
+            const clientName = document.getElementById('payment-client-select').value;
+            const summaryElem = document.getElementById('payment-pending-summary');
+            if (!clientName) {
+                summaryElem.textContent = 'Select a client above';
+                return;
+            }
+
+            const unpaidBalances = getClientUnpaidBalances();
+            const balanceUSD = unpaidBalances[clientName] || 0;
+            summaryElem.innerHTML = `<span class="text-amber-600 font-bold">Total Unpaid Balance: $${balanceUSD.toFixed(2)}</span>`;
+        }
+
+        function handleSaveNewPayment(e) {
+            e.preventDefault();
+            const clientName = document.getElementById('payment-client-select').value;
+            const amountPaidUSD = parseFloat(document.getElementById('payment-amount-paid').value);
+            const note = document.getElementById('payment-note').value.trim();
+            const rate = getModalExchangeRate();
+
+            if (!clientName || isNaN(amountPaidUSD) || amountPaidUSD <= 0) return;
+
+            // Fetch all unpaid / partially paid rides for this client, sorted oldest first (FIFO)
+            const unpaidRides = rides.filter(r => r.type === 'On Tab' && r.client === clientName && r.tabStatus !== 'Paid')
+                                     .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            let remainingMoneyUSD = amountPaidUSD;
+            const settledRideIds = [];
+            const ridesSummary = [];
+
+            for (let ride of unpaidRides) {
+                let rideCostUSD = parseFloat(ride.amount);
+                if (ride.currency === 'LBP') {
+                    rideCostUSD = rideCostUSD / rate;
+                }
+
+                // Check if there was already a previous partial payment on this ride
+                let previouslyPaidUSD = 0;
+                if (typeof payments !== 'undefined') {
+                    payments.forEach(p => {
+                        if (p.ridesSummary) {
+                            const match = p.ridesSummary.find(rs => rs.id === ride.id);
+                            if (match) {
+                                previouslyPaidUSD += (match.currency === 'LBP' ? match.amount / rate : match.amount);
+                            }
+                        }
+                    });
+                }
+
+                let rideRemainingUSD = rideCostUSD - previouslyPaidUSD;
+
+                if (remainingMoneyUSD >= rideRemainingUSD) {
+                    // Full coverage of this ride (or remainder of it)
+                    remainingMoneyUSD -= rideRemainingUSD;
+                    ride.tabStatus = 'Paid';
+                    settledRideIds.push(ride.id);
+
+                    const driverObj = drivers.find(d => d.id === ride.driverId);
+                    ridesSummary.push({
+                        id: ride.id,
+                        from: ride.from,
+                        to: ride.to,
+                        amount: rideRemainingUSD,
+                        currency: 'USD',
+                        driver: driverObj ? driverObj.name : 'Driver'
+                    });
+                } else if (remainingMoneyUSD > 0) {
+                    // Partial payment on this ride
+                    settledRideIds.push(ride.id);
+                    const driverObj = drivers.find(d => d.id === ride.driverId);
+                    ridesSummary.push({
+                        id: ride.id,
+                        from: ride.from,
+                        to: ride.to,
+                        amount: remainingMoneyUSD,
+                        currency: 'USD',
+                        driver: driverObj ? driverObj.name : 'Driver'
+                    });
+                    remainingMoneyUSD = 0;
+                    break;
+                }
+            }
+
+            let finalNote = note;
+            if (remainingMoneyUSD > 0.01) {
+                finalNote = (note ? note + ' — ' : '') + `Overpayment/Credit of $${remainingMoneyUSD.toFixed(2)} applied to future rides.`;
+            }
+
+            const newPayment = {
+                id: 'p_' + Date.now(),
+                clientName,
+                currency: 'USD',
+                totalPaidUSD: amountPaidUSD,
+                amountPaid: amountPaidUSD,
+                note: finalNote,
+                rideIds: settledRideIds,
+                ridesSummary,
+                date: new Date().toISOString()
+            };
+
+            if (!payments) payments = [];
+            payments.push(newPayment);
+
+            saveData();
+            closeModal('modal-new-payment');
+            renderClientTabs();
+            renderClientPaymentHistory();
+        }
+
+        function getRideRemainingUSD(ride) {
+            if (!ride || ride.type !== 'On Tab') return 0;
+            if (ride.tabStatus === 'Paid') return 0;
+
+            const rate = getExchangeRate();
+            let costUSD = parseFloat(ride.amount || 0);
+            if (ride.currency === 'LBP') costUSD = costUSD / rate;
+
+            // 1. Subtract direct payments found in payment records
+            let paidForThisRide = 0;
+            if (typeof payments !== 'undefined' && Array.isArray(payments)) {
+                payments.forEach(p => {
+                    if (p.ridesSummary && Array.isArray(p.ridesSummary)) {
+                        const match = p.ridesSummary.find(rs => rs.id === ride.id);
+                        if (match) {
+                            paidForThisRide += (match.currency === 'LBP' ? parseFloat(match.amount || 0) / rate : parseFloat(match.amount || 0));
+                        }
+                    }
+                });
+            }
+            let remaining = Math.max(0, costUSD - paidForThisRide);
+
+            // 2. Factor in advance overpayment credits from the client applied oldest-first (FIFO)
+            const clientName = (ride.client || '').trim();
+            if (clientName && typeof payments !== 'undefined' && Array.isArray(payments)) {
+                let totalOverpaidUSD = 0;
+                payments.forEach(p => {
+                    if ((p.clientName || '').trim().toLowerCase() === clientName.toLowerCase()) {
+                        let settledCostUSD = 0;
+                        if (p.ridesSummary && Array.isArray(p.ridesSummary)) {
+                            settledCostUSD = p.ridesSummary.reduce((sum, rs) => {
+                                const amt = parseFloat(rs.amount || 0);
+                                return sum + (rs.currency === 'LBP' ? amt / rate : amt);
+                            }, 0);
+                        }
+                        const paidUSD = parseFloat(p.totalPaidUSD || 0);
+                        if (paidUSD > settledCostUSD) {
+                            totalOverpaidUSD += (paidUSD - settledCostUSD);
+                        }
+                    }
+                });
+
+                if (totalOverpaidUSD > 0) {
+                    const clientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.toLowerCase());
+                    clientRides.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    let creditPool = totalOverpaidUSD;
+                    for (let r of clientRides) {
+                        let rCost = parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1);
+                        let rPaid = 0;
+                        payments.forEach(p => {
+                            if (p.ridesSummary) {
+                                const m = p.ridesSummary.find(rs => rs.id === r.id);
+                                if (m) rPaid += (m.currency === 'LBP' ? parseFloat(m.amount || 0) / rate : parseFloat(m.amount || 0));
+                            }
+                        });
+                        let rRem = Math.max(0, rCost - rPaid);
+
+                        if (creditPool >= rRem) {
+                            creditPool -= rRem;
+                            if (r.id === ride.id) {
+                                remaining = 0;
+                                break;
+                            }
+                        } else {
+                            rRem -= creditPool;
+                            creditPool = 0;
+                            if (r.id === ride.id) {
+                                remaining = rRem;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return remaining;
+        }
+
+        function getRideStatusBadge(ride) {
+            if (ride.tabStatus === 'Paid') {
+                return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Paid</span>`;
+            }
+            if (ride.type === 'On Tab') {
+                const remainingUSD = getRideRemainingUSD(ride);
+                const rate = getExchangeRate();
+                const originalCostUSD = parseFloat(ride.amount || 0) / (ride.currency === 'LBP' ? rate : 1);
+
+                if (remainingUSD > 0.01 && remainingUSD < originalCostUSD - 0.01) {
+                    return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800" title="Partially Paid ($${remainingUSD.toFixed(2)} remaining)">Partial</span>`;
+                }
+                if (remainingUSD <= 0.01) {
+                    return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Paid</span>`;
+                }
+                return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Unpaid</span>`;
+            }
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">N/A</span>`;
+        }
+
+        function renderClientPaymentHistory() {
+            const container = document.getElementById('client-payment-history-container');
+            container.innerHTML = '';
+
+            if (!payments || payments.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-2">No payment settlements recorded yet.</p>`;
+                return;
+            }
+
+            [...payments].reverse().forEach(p => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2";
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 border-b border-slate-200 pb-2">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">Settled Payment</span>
+                            <h4 class="font-bold text-slate-900 text-sm mt-1">${p.clientName}</h4>
+                            <p class="text-[11px] text-slate-500">Date: ${new Date(p.date).toLocaleDateString()} &bull; Note: ${p.note || 'None'}</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div class="text-right">
+                                <span class="text-[11px] text-slate-400 block">Total Settled</span>
+                                <strong class="text-emerald-600 text-base">$${p.totalPaidUSD.toFixed(2)}</strong>
+                            </div>
+                            <button onclick="deleteClientPayment('${p.id}')" class="text-slate-400 hover:text-red-600 p-2 transition-colors" title="Delete Payment Record">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-xs space-y-1 pt-1">
+                        <p class="font-semibold text-slate-500 text-[11px]">Included Rides (${p.rideIds.length}):</p>
+                        ${p.ridesSummary.map(rs => `
+                            <div class="flex justify-between items-center bg-white p-2 rounded-lg border border-slate-100">
+                                <span class="text-slate-700">${rs.from} &rarr; ${rs.to} (${rs.driver})</span>
+                                <span class="font-bold text-slate-900">${rs.currency === 'USD' ? '$' : 'LBP '}${rs.amount.toLocaleString()}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function deleteClientPayment(paymentId) {
+            if (!confirm('Are you sure you want to delete this payment record? This will revert the settled rides back to "Pending / Unpaid".')) {
+                return;
+            }
+
+            const payment = payments.find(p => p.id === paymentId);
+            if (!payment) return;
+
+            // Revert associated rides back to 'Unpaid'
+            if (payment.rideIds && Array.isArray(payment.rideIds)) {
+                payment.rideIds.forEach(rId => {
+                    const ride = rides.find(r => r.id === rId);
+                    if (ride) {
+                        ride.tabStatus = 'Unpaid';
+                    }
+                });
+            }
+
+            // Remove payment record from array
+            payments = payments.filter(p => p.id !== paymentId);
+
+            saveData();
+            renderClientTabs();
+            renderClientPaymentHistory();
+        }
+
+        // --- DRIVER SETTLEMENT MODAL & LOGIC ---
+        // Raw net balance trackers for modal calculation
+        let currentModalUsdNet = 0;
+        let currentModalLbpNet = 0;
+
+        function openSettleDriverModal(driverId, driverName, usdNet, lbpNet) {
+            currentModalUsdNet = usdNet;
+            currentModalLbpNet = lbpNet;
+
+            document.getElementById('settle-driver-id').value = driverId;
+            document.getElementById('settle-driver-name-display').innerText = driverName;
+            document.getElementById('settle-driver-usd-display').innerText = usdNet >= 0 ? `Driver owes office $${usdNet.toFixed(2)}` : `Office owes driver $${Math.abs(usdNet).toFixed(2)}`;
+            document.getElementById('settle-driver-lbp-display').innerText = lbpNet >= 0 ? `Driver owes office LBP ${Math.round(lbpNet).toLocaleString()}` : `Office owes driver LBP ${Math.round(Math.abs(lbpNet)).toLocaleString()}`;
+            document.getElementById('settle-driver-note').value = '';
+
+            recalculateModalTotalUSD();
+            document.getElementById('modal-settle-driver').classList.remove('hidden');
+        }
+
+        function recalculateModalTotalUSD() {
+            const rate = parseFloat(document.getElementById('settle-conversion-rate').value) || 90000;
+            const lbpConvertedToUsd = currentModalLbpNet / rate;
+            const combinedUsd = currentModalUsdNet + lbpConvertedToUsd;
+
+            const displayElem = document.getElementById('settle-driver-combined-usd-display');
+            if (combinedUsd > 0) {
+                displayElem.innerText = `Driver owes office $${combinedUsd.toFixed(2)}`;
+                displayElem.className = "text-amber-700 font-bold text-sm";
+            } else if (combinedUsd < 0) {
+                displayElem.innerText = `Office owes driver $${Math.abs(combinedUsd).toFixed(2)}`;
+                displayElem.className = "text-emerald-700 font-bold text-sm";
+            } else {
+                displayElem.innerText = "Fully Settled ($0.00)";
+                displayElem.className = "text-slate-600 font-bold text-sm";
+            }
+        }
+
+        function executeDriverSettlement() {
+            const driverId = document.getElementById('settle-driver-id').value;
+            const note = document.getElementById('settle-driver-note').value;
+            if (!driverId) return;
+
+            const driverRides = rides.filter(r => r.driverId === driverId && !r.driverSettled);
+            const rideIds = driverRides.map(r => r.id);
+
+            driverRides.forEach(r => {
+                r.driverSettled = true;
+            });
+
+            const settlementRecord = {
+                id: 'ds_' + Date.now(),
+                driverId,
+                date: new Date().toISOString(),
+                rideIds,
+                note: note || 'Weekly driver settlement'
+            };
+
+            if (!driverSettlements) driverSettlements = [];
+            driverSettlements.push(settlementRecord);
+
+            saveData();
+            closeModal('modal-settle-driver');
+            switchTab('drivers');
+        }
+
+        function openAddRideForDriver(driverId) {
+            // 1. Open the standard Add Ride modal
+            openAddRideModal();
+
+            // 2. Find the driver object by ID
+            const driverObj = drivers.find(d => d.id === driverId);
+            if (driverObj) {
+                // 3. Pre-fill the driver search and hidden ID inputs
+                document.getElementById('modal-ride-driver-search').value = driverObj.name;
+                document.getElementById('modal-ride-driver-id').value = driverObj.id;
+            }
+        }
+
+        // --- ACTIONS & MODALS CONTROLLER ---
+        function openAddRideModal() {
+            const defaultRadio = document.querySelector('input[name="ride-type-radio"][value="Cash"]');
+            if (defaultRadio) defaultRadio.checked = true;
+
+            // Reset driver search fields
+            document.getElementById('modal-ride-driver-search').value = '';
+            document.getElementById('modal-ride-driver-id').value = '';
+            document.getElementById('driver-autocomplete-dropdown').classList.add('hidden');
+
+            toggleRideTypeFields();
+            document.getElementById('add-ride-modal').classList.remove('hidden');
+        }
+
+        function toggleRideTypeFields() {
+            const checkedRadio = document.querySelector('input[name="ride-type-radio"]:checked');
+            const type = checkedRadio ? checkedRadio.value : 'Cash';
+            const clientContainer = document.getElementById('tab-client-field-container');
+            const fromInput = document.getElementById('modal-ride-from');
+            const toInput = document.getElementById('modal-ride-to');
+
+            if (type === 'On Tab') {
+                clientContainer.classList.remove('hidden');
+                document.getElementById('modal-ride-client').setAttribute('required', 'true');
+
+                // Make From & To required for On Tab
+                fromInput.setAttribute('required', 'true');
+                toInput.setAttribute('required', 'true');
+                fromInput.previousElementSibling.innerText = 'From Location *';
+                toInput.previousElementSibling.innerText = 'To Location *';
+            } else {
+                clientContainer.classList.add('hidden');
+                document.getElementById('modal-ride-client').removeAttribute('required');
+
+                // Make From & To optional for Cash / Whish
+                fromInput.removeAttribute('required');
+                toInput.removeAttribute('required');
+                fromInput.previousElementSibling.innerText = 'From Location (Optional)';
+                toInput.previousElementSibling.innerText = 'To Location (Optional)';
+            }
+        }
+
+        function handleSaveRide(e) {
+            e.preventDefault();
+            const driverId = document.getElementById('modal-ride-driver-id').value;
+            if (!driverId) {
+                alert('Please select a valid driver from the autocomplete dropdown.');
+                document.getElementById('modal-ride-driver-search').focus();
+                return;
+            }
+            const checkedRadio = document.querySelector('input[name="ride-type-radio"]:checked');
+            const type = checkedRadio ? checkedRadio.value : 'Cash';
+            const currency = document.getElementById('modal-ride-currency').value;
+            const amount = parseFloat(document.getElementById('modal-ride-amount').value);
+            const from = document.getElementById('modal-ride-from').value || '';
+            const to = document.getElementById('modal-ride-to').value || '';
+            const note = document.getElementById('modal-ride-note').value;
+
+            let client = '';
+            if (type === 'On Tab') {
+                client = document.getElementById('modal-ride-client').value.trim();
+                const searchFieldVal = document.getElementById('modal-ride-client-search').value.trim();
+
+                // Enforce strict selection from existing clients database
+                if (!client) {
+                    alert('Please select a valid existing client from the dropdown list for an "On Tab" ride.');
+                    document.getElementById('modal-ride-client-search').focus();
+                    return;
+                }
+            }
+
+            // Default date to yesterday (subtracting 24 hours in milliseconds)
+            const yesterdayDate = new Date(Date.now() - 86400000).toISOString();
+
+            // Check if the client has available overpayment credit to auto-pay this new ride
+            let initialTabStatus = type === 'On Tab' ? 'Unpaid' : '';
+            if (type === 'On Tab' && client) {
+                let totalOverpaidUSD = 0;
+                const rate = getExchangeRate();
+                if (typeof payments !== 'undefined' && payments) {
+                    payments.filter(p => p.clientName.toLowerCase() === client.toLowerCase()).forEach(p => {
+                        let settledCostUSD = 0;
+                        if (p.ridesSummary) {
+                            settledCostUSD = p.ridesSummary.reduce((sum, rs) => sum + (rs.currency === 'LBP' ? rs.amount / rate : rs.amount), 0);
+                        }
+                        if (p.totalPaidUSD > settledCostUSD) {
+                            totalOverpaidUSD += (p.totalPaidUSD - settledCostUSD);
+                        }
+                    });
+                }
+
+                // Deduct any existing unpaid rides already using up that credit
+                const clientUnpaidRides = rides.filter(r => r.type === 'On Tab' && r.client && r.client.toLowerCase() === client.toLowerCase() && r.tabStatus !== 'Paid');
+                const unpaidDebtUSD = clientUnpaidRides.reduce((sum, r) => sum + (r.currency === 'LBP' ? parseFloat(r.amount) / rate : parseFloat(r.amount)), 0);
+
+                let availableCredit = totalOverpaidUSD - unpaidDebtUSD;
+                let newRideCostUSD = parseFloat(amount);
+                if (currency === 'LBP') newRideCostUSD = newRideCostUSD / rate;
+
+                if (availableCredit >= newRideCostUSD) {
+                    initialTabStatus = 'Paid'; // Automatically covered by client credit!
+                }
+            }
+
+            const newRide = {
+                id: 'r_' + Date.now(),
+                driverId,
+                type,
+                currency,
+                amount,
+                from,
+                to,
+                date: yesterdayDate,
+                client: type === 'On Tab' ? client : '',
+                note: note || '',
+                tabStatus: initialTabStatus,
+                driverSettled: false
+            };
+
+            rides.push(newRide);
+            saveData();
+            closeModal('add-ride-modal');
+            document.getElementById('add-ride-form').reset();
+            // Reset autocomplete search field as well
+            if (document.getElementById('modal-ride-client-search')) {
+                document.getElementById('modal-ride-client-search').value = '';
+                document.getElementById('modal-ride-client').value = '';
+            }
+            switchTab(activeTab);
+        }
+
+        function openAddDriverModal() {
+            document.getElementById('add-driver-modal').classList.remove('hidden');
+        }
+
+        function handleSaveDriver(e) {
+            e.preventDefault();
+            const name = document.getElementById('modal-driver-name').value;
+            const phone = document.getElementById('modal-driver-phone').value;
+
+            const newDriver = {
+                id: 'd_' + Date.now(),
+                name,
+                phone: phone || ''
+            };
+
+            drivers.push(newDriver);
+            saveData();
+            closeModal('add-driver-modal');
+            document.getElementById('add-driver-form').reset();
+            switchTab(activeTab);
+        }
+
+        function promptDeleteDriver(driverId, name) {
+            driverToDelete = driverId;
+            document.getElementById('delete-driver-name-text').innerText = name;
+            document.getElementById('confirm-delete-driver-btn').onclick = executeDeleteDriver;
+            document.getElementById('delete-driver-modal').classList.remove('hidden');
+        }
+
+        function executeDeleteDriver() {
+            if (!driverToDelete) return;
+            drivers = drivers.filter(d => d.id !== driverToDelete);
+            rides = rides.filter(r => r.driverId !== driverToDelete);
+            saveData();
+            closeModal('delete-driver-modal');
+            driverToDelete = null;
+            renderDriverTab();
+        }
+
+        function deleteRide(rideId) {
+            if (!confirm('Are you sure you want to delete this ride? This action cannot be undone.')) {
+                return;
+            }
+            rides = rides.filter(r => r.id !== rideId);
+            saveData();
+            switchTab(activeTab);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // --- DRIVER PDF GENERATOR (DIRECT jsPDF CANVAS METHOD) ---
+        async function downloadDriverInvoicePDF(driverId) {
+            const { jsPDF } = window.jspdf || {};
+            if (!jsPDF) {
+                alert('jsPDF library is not loaded. Please include jsPDF in your head tag.');
+                return;
+            }
+
+            const driverObj = drivers.find(d => d.id === driverId);
+            if (!driverObj) {
+                alert('Driver not found.');
+                return;
+            }
+            const driverName = driverObj.name;
+
+            const driverRides = rides.filter(r => r.driverId === driverId && !r.driverSettled);
+            if (driverRides.length === 0) {
+                alert(`No unsettled rides found for ${driverName} to generate an invoice.`);
+                return;
+            }
+
+            const m = calculateDriverMetrics(driverId);
+            const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            // Build template element with exact fixed width for standard portrait printing
+            const element = document.createElement('div');
+            element.style.width = '700px';
+            element.style.background = '#ffffff';
+            element.style.padding = '25px';
+            element.style.boxSizing = 'border-box';
+            element.style.fontFamily = 'Arial, sans-serif';
+
+            element.innerHTML = `
+                <div style="width: 100%; color: #1e293b; background-color: #ffffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 12px; margin-bottom: 20px;">
+                        <div>
+                            <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
+                            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Driver Settlement & Statement</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <h2 style="font-size: 16px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Statement</h2>
+                            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Date: ${todayDate}</p>
+                        </div>
+                    </div>
+
+                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                        <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 2px 0;">Driver Name:</p>
+                        <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${driverName}</h3>
+                        <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">${driverRides.length} Unsettled Ride(s)</p>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 14%;">Date</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 18%;">Type</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 28%;">Route</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 18%;">Client / Notes</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 11%;">Gross</th>
+                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 11%;">Cut (90%)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${driverRides.map(r => {
+                                const gross = parseFloat(r.amount || 0);
+                                const symbol = r.currency === 'USD' ? '$' : 'LBP ';
+                                let driverCut = (r.type === 'To Samer' || r.type === 'Money with Driver') ? 0 : gross * 0.90;
+
+                                return `
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 8px; color: #64748b; vertical-align: top; word-break: break-word;">${r.date ? new Date(r.date).toLocaleDateString() : 'N/A'}</td>
+                                        <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">
+                                            ${(r.type === 'To Samer' || r.type === 'Money with Driver')
+                                                ? '<span style="background-color: #eff6ff; color: #1d4ed8; padding: 2px 4px; border-radius: 4px; font-size: 9px; font-weight: 700; border: 1px solid #bfdbfe;">To Samer</span>'
+                                                : `<span style="background-color: #e2e8f0; padding: 2px 4px; border-radius: 4px; font-size: 9px;">${r.type}</span>`
+                                            }
+                                        </td>
+                                        <td style="padding: 8px; color: #1e293b; vertical-align: top; word-break: break-word;">
+                                            ${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}
+                                        </td>
+                                        <td style="padding: 8px; color: #475569; vertical-align: top; word-break: break-word;">
+                                            ${r.client ? `<div style="font-weight: 600; color: #0f172a;">${r.client}</div>` : ''}
+                                            ${r.note ? `<div style="font-size: 9px; color: #64748b; font-style: italic; margin-top: 2px;">${r.note}</div>` : ''}
+                                            ${!r.client && !r.note ? '<span style="color: #94a3b8;">-</span>' : ''}
+                                        </td>
+                                        <td style="padding: 8px; text-align: right; color: #475569; vertical-align: top;">
+                                            ${symbol}${gross.toLocaleString()}
+                                        </td>
+                                        <td style="padding: 8px; text-align: right; font-weight: 700; color: #16a34a; vertical-align: top;">
+                                            ${symbol}${driverCut.toLocaleString(undefined, {minimumFractionDigits: r.currency === 'USD' ? 2 : 0, maximumFractionDigits: r.currency === 'USD' ? 2 : 0})}
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+
+                    <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
+                        <div style="width: 300px; background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px;">
+                            <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;">Net Balance Summary</div>
+
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 4px; color: ${m.USD.netSettlement > 0 ? '#b45309' : (m.USD.netSettlement < 0 ? '#15803d' : '#64748b')}">
+                                <span>USD Net Balance:</span>
+                                <span>${m.USD.netSettlement > 0 ? `Driver Owes $${m.USD.netSettlement.toFixed(2)}` : (m.USD.netSettlement < 0 ? `Owner Owes $${Math.abs(m.USD.netSettlement).toFixed(2)}` : 'Fully Settled')}</span>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 6px; color: ${m.LBP.netSettlement > 0 ? '#b45309' : (m.LBP.netSettlement < 0 ? '#15803d' : '#64748b')}">
+                                <span>LBP Net Balance:</span>
+                                <span>${m.LBP.netSettlement > 0 ? `Driver Owes LBP ${Math.round(m.LBP.netSettlement).toLocaleString()}` : (m.LBP.netSettlement < 0 ? `Owner Owes LBP ${Math.round(Math.abs(m.LBP.netSettlement)).toLocaleString()}` : 'Fully Settled')}</span>
+                            </div>
+
+                            <div style="border-top: 1px solid #e2e8f0; padding-top: 6px; font-size: 10px; color: #475569;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                                    <span>Conversion Rate:</span>
+                                    <span style="font-weight: 600;">89,500 LBP/$</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: ${ (m.USD.netSettlement + (m.LBP.netSettlement / 90000)) > 0 ? '#b45309' : ((m.USD.netSettlement + (m.LBP.netSettlement / 90000)) < 0 ? '#15803d' : '#1e293b') };">
+                                    <span>Total Combined (USD):</span>
+                                    <span>${
+                                        (() => {
+                                            const combined = m.USD.netSettlement + (m.LBP.netSettlement / 90000);
+                                            if (combined > 0) return `Driver Owes $${combined.toFixed(2)}`;
+                                            if (combined < 0) return `Owner Owes $${Math.abs(combined).toFixed(2)}`;
+                                            return 'Fully Settled ($0.00)';
+                                        })()
+                                    }</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; font-size: 9px; color: #94a3b8;">
+                        <p style="margin: 0;">One Minute Taxi &bull; Driver Statement</p>
+                    </div>
+                </div>
+            `;
+
+            // Mount off-screen for clean rendering
+            element.style.position = 'absolute';
+            element.style.left = '-9999px';
+            element.style.top = '0';
+            document.body.appendChild(element);
+
+            try {
+                const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+                const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+                // Initialize jsPDF A4 portrait mode
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfPageHeight = pdf.internal.pageSize.getHeight();
+
+                const imgWidth = pdfWidth;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                // First page
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pdfPageHeight;
+
+                // Add additional PDF pages if content spills over
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pdfPageHeight;
+                }
+
+                pdf.save(`Driver_Statement_${driverName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+            } catch (err) {
+                console.error('PDF Error:', err);
+                alert('Error generating PDF document: ' + err.message);
+            } finally {
+                if (document.body.contains(element)) {
+                    document.body.removeChild(element);
+                }
+            }
+        }
+
+        function openPaymentModalForClient(clientName) {
+            if (typeof openPaymentModal === 'function') {
+                openPaymentModal();
+            } else if (typeof openNewPaymentModal === 'function') {
+                openNewPaymentModal();
+            }
+
+            setTimeout(() => {
+                const clientSelect = document.getElementById('payment-client-select') || document.querySelector('select[name="client"]');
+                if (clientSelect) {
+                    clientSelect.value = clientName;
+                    clientSelect.dispatchEvent(new Event('change'));
+                }
+            }, 100);
+        }
+
+        // --- CLIENT STATEMENT & WHATSAPP PDF GENERATOR ---
+async function sendClientInvoiceWhatsApp(clientName) {
+    let clientPhone = '';
+    if (typeof clients !== 'undefined' && Array.isArray(clients)) {
+        const found = clients.find(c => (c.name || '').trim().toLowerCase() === clientName.trim().toLowerCase());
+        if (found && found.phone) {
+            clientPhone = found.phone.replace(/[^0-9+]/g, '');
+        }
+    }
+
+    const tabRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase() && r.tabStatus !== 'Paid' && getRideRemainingUSD(r) > 0.01);
+
+    if (tabRides.length === 0) {
+        alert(`No unsettled rides found for ${clientName}.`);
+        return;
+    }
+
+    let usdTotalDue = 0;
+    let ridesSummaryText = tabRides.map(r => {
+        const rem = getRideRemainingUSD(r);
+        usdTotalDue += rem;
+        return `- ${new Date(r.date).toLocaleDateString()}: ${r.from || 'Pickup'} -> ${r.to || 'Destination'} ($${rem.toFixed(2)})`;
+    }).join('\n');
+
+    const message = `Hello ${clientName},\n\nHere is your statement and invoice PDF from *One Minute Taxi*:\n\n${ridesSummaryText}\n\n*Total Balance Due: $${usdTotalDue.toFixed(2)}*\n\nThank you for riding with us!`;
+
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+        alert('jsPDF library is not loaded.');
+        return;
+    }
+
+    const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Build template element with fixed width for standard portrait printing
+    const element = document.createElement('div');
+    element.style.width = '700px';
+    element.style.background = '#ffffff';
+    element.style.padding = '25px';
+    element.style.boxSizing = 'border-box';
+    element.style.fontFamily = 'Arial, sans-serif';
+
+    element.innerHTML = `
+        <div style="width: 100%; color: #1e293b; background-color: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 12px; margin-bottom: 20px;">
+                <div>
+                    <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
+                    <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Dispatch & Client Billing</p>
+                </div>
+                <div style="text-align: right;">
+                    <h2 style="font-size: 16px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Invoice</h2>
+                    <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Date: ${todayDate}</p>
+                </div>
+            </div>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 2px 0;">Billed To:</p>
+                <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
+                <thead>
+                    <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
+                        <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 25%;">Date</th>
+                        <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 55%;">Route Details</th>
+                        <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Balance Due</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tabRides.map(r => `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 8px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
+                            <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}</td>
+                            <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${getRideRemainingUSD(r).toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            <div style="display: flex; justify-content: flex-end;">
+                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: #15803d; font-size: 11px;">
+                    Total Due: $${usdTotalDue.toFixed(2)}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Mount off-screen for clean canvas rendering
+    element.style.position = 'absolute';
+    element.style.left = '-9999px';
+    element.style.top = '0';
+    document.body.appendChild(element);
+
+    try {
+        const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfPageHeight = pdf.internal.pageSize.getHeight();
+        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfPageHeight;
+
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfPageHeight;
+        }
+
+        pdf.save(`Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+
+        // Open WhatsApp immediately with the summary text
+        const whatsappUrl = `https://wa.me/${clientPhone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+    } catch (err) {
+        console.error('PDF Error:', err);
+        alert('Error generating invoice PDF: ' + err.message);
+    } finally {
+        if (document.body.contains(element)) {
+            document.body.removeChild(element);
+        }
+    }
+}
+
+        function openEditRideModal(rideId) {
+            const ride = rides.find(r => r.id === rideId);
+            if (!ride) return;
+
+            document.getElementById('edit-ride-id').value = ride.id;
+
+            // Set driver autocomplete fields
+            const driverObj = drivers.find(d => d.id === ride.driverId);
+            document.getElementById('edit-ride-driver-search').value = driverObj ? driverObj.name : '';
+            document.getElementById('edit-ride-driver-id').value = ride.driverId;
+            document.getElementById('edit-driver-autocomplete-dropdown').classList.add('hidden');
+
+            // Set payment type radio button
+            const currentType = (ride.type === 'Money with Driver') ? 'To Samer' : (ride.type || 'Cash');
+            const matchingRadio = document.querySelector(`input[name="edit-ride-type-radio"][value="${currentType}"]`);
+            if (matchingRadio) {
+                matchingRadio.checked = true;
+            }
+
+            document.getElementById('edit-ride-currency').value = ride.currency || 'USD';
+            document.getElementById('edit-ride-amount').value = ride.amount || '';
+            document.getElementById('edit-ride-from').value = ride.from || '';
+            document.getElementById('edit-ride-to').value = ride.to || '';
+            document.getElementById('edit-ride-note').value = ride.note || '';
+
+            const clientSearch = document.getElementById('edit-ride-client-search');
+            const clientHidden = document.getElementById('edit-ride-client');
+            clientSearch.value = ride.client || '';
+            clientHidden.value = ride.client || '';
+
+            toggleEditRideTypeFields();
+            document.getElementById('edit-ride-modal').classList.remove('hidden');
+        }
+
+        function toggleEditRideTypeFields() {
+            const checkedRadio = document.querySelector('input[name="edit-ride-type-radio"]:checked');
+            const type = checkedRadio ? checkedRadio.value : 'Cash';
+
+            const clientContainer = document.getElementById('edit-tab-client-field-container');
+            const fromInput = document.getElementById('edit-ride-from');
+            const toInput = document.getElementById('edit-ride-to');
+
+            if (type === 'On Tab') {
+                clientContainer.classList.remove('hidden');
+                document.getElementById('edit-ride-client').setAttribute('required', 'true');
+                fromInput.setAttribute('required', 'true');
+                toInput.setAttribute('required', 'true');
+            } else {
+                clientContainer.classList.add('hidden');
+                document.getElementById('edit-ride-client').removeAttribute('required');
+                fromInput.removeAttribute('required');
+                toInput.removeAttribute('required');
+            }
+        }
+
+        function filterEditClientDropdown(query) {
+            const dropdown = document.getElementById('edit-client-autocomplete-dropdown');
+            const hiddenInput = document.getElementById('edit-ride-client');
+            hiddenInput.value = '';
+
+            if (!query.trim()) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            const matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+            if (matches.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-400 italic">No matching clients found.</div>`;
+                dropdown.classList.remove('hidden');
+                return;
+            }
+
+            dropdown.innerHTML = '';
+            matches.forEach(c => {
+                const item = document.createElement('div');
+                item.className = "p-2.5 hover:bg-slate-100 cursor-pointer text-xs flex justify-between items-center transition";
+                item.innerHTML = `<span><strong>${c.name}</strong></span> <span class="text-slate-400">${c.phone || ''}</span>`;
+                item.onclick = function() {
+                    document.getElementById('edit-ride-client-search').value = c.name;
+                    hiddenInput.value = c.name;
+                    dropdown.classList.add('hidden');
+                };
+                dropdown.appendChild(item);
+            });
+            dropdown.classList.remove('hidden');
+        }
+
+        function handleUpdateRide(e) {
+            e.preventDefault();
+            const rideId = document.getElementById('edit-ride-id').value;
+            const ride = rides.find(r => r.id === rideId);
+            if (!ride) return;
+
+            // Get and validate driver ID from autocomplete hidden input
+            const driverId = document.getElementById('edit-ride-driver-id').value;
+            if (!driverId) {
+                alert('Please select a valid driver from the autocomplete dropdown.');
+                document.getElementById('edit-ride-driver-search').focus();
+                return;
+            }
+            ride.driverId = driverId;
+
+            // Get payment type from selected radio button
+            const checkedRadio = document.querySelector('input[name="edit-ride-type-radio"]:checked');
+            ride.type = checkedRadio ? checkedRadio.value : 'Cash';
+
+            ride.currency = document.getElementById('edit-ride-currency').value;
+            ride.amount = parseFloat(document.getElementById('edit-ride-amount').value) || 0;
+            ride.from = document.getElementById('edit-ride-from').value || '';
+            ride.to = document.getElementById('edit-ride-to').value || '';
+            ride.note = document.getElementById('edit-ride-note').value || '';
+
+            if (ride.type === 'On Tab') {
+                ride.client = document.getElementById('edit-ride-client').value.trim() || document.getElementById('edit-ride-client-search').value.trim();
+                if (!ride.client) {
+                    alert('Please select a valid client for an On Tab ride.');
+                    return;
+                }
+            } else {
+                ride.client = '';
+                ride.tabStatus = '';
+            }
+
+            saveData();
+            closeModal('edit-ride-modal');
+            switchTab(activeTab);
+        }
+
+        // --- APP INIT ---
+        window.onload = function() {
+            loadDataFromCloud();
+        };
+    </script>
+</body>
+</html>
