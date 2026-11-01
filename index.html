@@ -1624,70 +1624,70 @@
         }
 
         // Function to build Client Card with PDF Download Button at the Top Right
-function buildClientCardHTML(c, pendingCount) {
-    const pendingRides = c.rides.filter(r => r.tabStatus !== 'Paid');
+        function buildClientCardHTML(c, pendingCount) {
+            const pendingRides = c.rides.filter(r => r.tabStatus !== 'Paid');
 
-    return `
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
-            <div>
-                <h3 class="font-bold text-slate-900 text-xl">${c.client}</h3>
-                <p class="text-xs text-slate-500">${c.rides.length} Total Rides (${pendingRides.length} Unsettled)</p>
-            </div>
-            <div class="flex items-center space-x-2">
-                <button onclick="downloadClientInvoicePDF('${c.client.replace(/'/g, "\\'")}')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center">
-                    <i class="fa-solid fa-file-pdf mr-2"></i> Download Invoice PDF
-                </button>
-                <span class="px-3 py-1 rounded-full text-xs font-semibold ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
-                    ${pendingCount > 0 ? `${pendingCount} Pending` : 'All Settled'}
-                </span>
-            </div>
-        </div>
+            return `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-100 pb-4">
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-xl">${c.client}</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">${c.phone ? 'Phone: ' + c.phone + ' &bull; ' : ''} ${c.rides.length} Total Rides (${pendingRides.length} Unsettled)</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="downloadClientInvoicePDF('${c.client.replace(/'/g, "\\'")}')" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center">
+                            <i class="fa-solid fa-file-pdf mr-2"></i> Download Invoice PDF
+                        </button>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                            ${pendingCount > 0 ? `${pendingCount} Pending` : 'All Settled'}
+                        </span>
+                    </div>
+                </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200/80">
-            <div class="flex justify-between font-semibold">
-                <span class="text-slate-500">Unpaid USD Total:</span>
-                <span class="text-amber-600 font-bold text-sm">$${c.USD.toFixed(2)}</span>
-            </div>
-            <div class="flex justify-between font-semibold">
-                <span class="text-slate-500">Unpaid LBP Total:</span>
-                <span class="text-amber-600 font-bold text-sm">LBP ${Math.round(c.LBP).toLocaleString()}</span>
-            </div>
-        </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+                    <div class="flex justify-between font-semibold">
+                        <span class="text-slate-500">Unpaid USD Total:</span>
+                        <span class="text-amber-600 font-bold text-sm">$${c.USD.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between font-semibold">
+                        <span class="text-slate-500">Unpaid LBP Total:</span>
+                        <span class="text-amber-600 font-bold text-sm">LBP ${Math.round(c.LBP).toLocaleString()}</span>
+                    </div>
+                </div>
 
-        <div class="space-y-2 pt-2">
-            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ride Details & History</p>
-            <div class="overflow-x-auto border border-slate-100 rounded-xl">
-                <table class="w-full text-left text-xs text-slate-600">
-                    <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[10px]">
-                        <tr>
-                            <th class="p-3">Date</th>
-                            <th class="p-3">Route (From &rarr; To)</th>
-                            <th class="p-3">Status</th>
-                            <th class="p-3 text-right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        ${c.rides.map(r => `
-                            <tr class="${r.tabStatus === 'Paid' ? 'bg-slate-50/50 text-slate-400' : ''}">
-                                <td class="p-3">${new Date(r.date).toLocaleDateString()}</td>
-                                <td class="p-3 font-medium text-slate-700">
-                                    <div>${r.from || 'Direct Ride'} &rarr; ${r.to || 'Destination'}</div>
-                                    ${r.note ? `<div class="text-[11px] text-slate-500 italic mt-0.5"><i class="fa-regular fa-note-sticky mr-1 text-slate-400"></i>${r.note}</div>` : ''}
-                                </td>
-                                <td class="p-3">
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.tabStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                                        ${r.tabStatus === 'Paid' ? 'PAID' : 'PENDING'}
-                                    </span>
-                                </td>
-                                <td class="p-3 text-right font-bold text-slate-900">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-}
+                <div class="space-y-2 pt-2">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ride Details & History</p>
+                    <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                        <table class="w-full text-left text-xs text-slate-600">
+                            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold text-[10px]">
+                                <tr>
+                                    <th class="p-3">Date</th>
+                                    <th class="p-3">Route (From &rarr; To)</th>
+                                    <th class="p-3">Status</th>
+                                    <th class="p-3 text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${c.rides.map(r => `
+                                    <tr class="${r.tabStatus === 'Paid' ? 'bg-slate-50/50 text-slate-400' : ''}">
+                                        <td class="p-3">${new Date(r.date).toLocaleDateString()}</td>
+                                        <td class="p-3 font-medium text-slate-700">
+                                            <div>${r.from || 'Direct Ride'} &rarr; ${r.to || 'Destination'}</div>
+                                            ${r.note ? `<div class="text-[11px] text-slate-500 italic mt-0.5"><i class="fa-regular fa-note-sticky mr-1 text-slate-400"></i>${r.note}</div>` : ''}
+                                        </td>
+                                        <td class="p-3">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.tabStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                                ${r.tabStatus === 'Paid' ? 'PAID' : 'PENDING'}
+                                            </span>
+                                        </td>
+                                        <td class="p-3 text-right font-bold text-slate-900">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
 
 // Function to generate and trigger the PDF download for Client Invoice
 async function downloadClientInvoicePDF(clientName) {
@@ -2861,7 +2861,9 @@ async function downloadClientInvoicePDF(clientName) {
                 }
 
                 // Safely trigger the PDF file download (No WhatsApp redirection)
-                pdf.save(`Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+                const pdfBlob = pdf.output('blob');
+                const blobUrl = URL.createObjectURL(pdfBlob);
+                window.open(blobUrl, '_blank');
 
             } catch (err) {
                 console.error('PDF Error:', err);
