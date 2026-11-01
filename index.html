@@ -1517,7 +1517,7 @@
                     `;
 
                     const card = document.createElement('div');
-                    card.className = "col-span-full bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm space-y-4";
+                    card.className = "col-span-full bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-sm space-y-4";
 
                     let clientRidesHTML = c.rides.map(r => {
                         const originalCost = parseFloat(r.amount || 0);
@@ -1539,20 +1539,23 @@
                     }).join('');
 
                     card.innerHTML = `
-                        <div class="flex justify-between items-center border-b border-slate-100 pb-4">
-                            <div>
-                                <h3 class="font-bold text-slate-900 text-lg">${c.client}</h3>
-                                <p class="text-xs text-slate-500">${c.phone ? 'Phone: ' + c.phone + ' &bull; ' : ''} ${c.rides.length} Total Rides</p>
-                            </div>
-                            <div class="text-right flex items-center space-x-3">
+                        <div class="border-b border-slate-100 pb-4 space-y-3">
+                            <div class="flex justify-between items-start">
                                 <div>
-                                    <span class="text-xs text-slate-400 block">Unpaid USD Total</span>
-                                    <strong class="text-amber-600 text-lg">$${c.USD.toFixed(2)}</strong>
+                                    <h3 class="font-bold text-slate-900 text-xl">${c.client}</h3>
+                                    ${c.phone ? `<p class="text-xs text-slate-600 font-medium mt-0.5">Phone: ${c.phone}</p>` : ''}
+                                    <p class="text-xs text-slate-500 mt-0.5">${c.rides.length} Total Rides &bull; <span class="text-amber-600 font-semibold">${pendingCount} Pending</span></p>
                                 </div>
-                                <button onclick="openPaymentModalForClient('${c.client.replace(/'/g, "\\'")}')" class="px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold text-xs shadow-md transition-all flex items-center">
-                                    <i class="fa-solid fa-plus mr-1"></i> Payment
+                                <div class="text-right">
+                                    <span class="text-[10px] uppercase font-bold text-slate-400 block">Unpaid USD</span>
+                                    <strong class="text-amber-600 text-xl">$${c.USD.toFixed(2)}</strong>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 pt-1">
+                                <button onclick="openPaymentModalForClient('${c.client.replace(/'/g, "\\'")}')" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-semibold text-xs shadow-md transition-all flex items-center">
+                                    <i class="fa-solid fa-plus mr-1.5"></i> Payment
                                 </button>
-                                <button onclick="sendClientInvoiceWhatsApp('${c.client.replace(/'/g, "\\'")}')" class="px-3.5 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold text-xs shadow-md transition-all flex items-center" title="Send Statement">
+                                <button onclick="sendClientInvoiceWhatsApp('${c.client.replace(/'/g, "\\'")}')" class="px-3.5 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold text-xs shadow-md transition-all flex items-center">
                                     <i class="fa-brands fa-whatsapp mr-1.5 text-sm"></i> Send
                                 </button>
                             </div>
