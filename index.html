@@ -81,6 +81,9 @@
                     <button onclick="switchTab('tabs')" id="nav-tabs" class="px-4 py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900">
                         <i class="fa-solid fa-file-invoice-dollar mr-2"></i>Client Tabs
                     </button>
+                    <button onclick="switchTab('recent')" id="nav-recent" class="px-4 py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900">
+                        <i class="fa-solid fa-clock-rotate-left mr-2"></i>Recent
+                    </button>
                 </nav>
 
                 <!-- Actions -->
@@ -348,6 +351,25 @@
             </div>
         </section>
 
+        <!-- TAB 5: RECENT ON-TAB RIDES -->
+                <section id="tab-recent" class="tab-content hidden space-y-6">
+                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">Recent "On-Tab" Rides</h2>
+                            <p class="text-xs text-slate-500">Quickly filter and send single-ride invoices via WhatsApp</p>
+                        </div>
+                        <select id="tab-time-filter" onchange="renderRecentTab()" class="bg-slate-50 border border-slate-300 text-xs sm:text-sm rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none w-full sm:w-auto">
+                            <option value="today">Today</option>
+                            <option value="this-week" selected>This Week</option>
+                            <option value="all">All Unpaid Tab</option>
+                        </select>
+                    </div>
+                    <!-- Responsive list container -->
+                    <div id="recent-tab-list" class="space-y-3 pb-20">
+                        <!-- Dynamically populated -->
+                    </div>
+                </section>
+
     </main>
 
     <!-- MOBILE BOTTOM NAVIGATION BAR -->
@@ -367,6 +389,10 @@
         <button onclick="switchTab('tabs')" id="mob-nav-tabs" class="flex flex-col items-center py-1.5 px-3 text-slate-500 hover:text-brand-600 text-xs font-medium">
             <i class="fa-solid fa-file-invoice-dollar text-lg mb-0.5"></i>
             <span>Tabs</span>
+        </button>
+        <button onclick="switchTab('recent')" id="mob-nav-recent" class="flex flex-col items-center py-1.5 px-3 text-slate-500 hover:text-brand-600 text-xs font-medium">
+            <i class="fa-solid fa-clock-rotate-left text-lg mb-0.5"></i>
+            <span>Recent</span>
         </button>
     </div>
 
@@ -1002,7 +1028,7 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabName}`).classList.remove('hidden');
 
-            const tabs = ['dashboard', 'drivers', 'rides', 'tabs'];
+            const tabs = ['dashboard', 'drivers', 'rides', 'tabs', 'recent'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`nav-${t}`);
                 const mobBtn = document.getElementById(`mob-nav-${t}`);
@@ -1022,6 +1048,7 @@
                 renderClientTabs();
                 renderClientPaymentHistory();
             }
+            if (tabName === 'recent') renderRecentTab();
         }
 
         // --- CALCULATION LOGIC ENGINE ---
@@ -3119,6 +3146,130 @@ async function downloadClientInvoicePDF(clientName) {
             closeModal('edit-ride-modal');
             switchTab(activeTab);
         }
+
+        // 1. Render Recent Tab List (Optimized for Mobile & Desktop)
+                function renderRecentTab() {
+                    const filter = document.getElementById('tab-time-filter')?.value || 'this-week';
+                    const container = document.getElementById('recent-tab-list');
+                    if (!container) return;
+
+                    const now = new Date();
+
+                    // Filter rides where payment type is 'Tab'
+                    const tabRides = rides.filter(r => {
+                        const isTab = (r.type || '').toLowerCase() === 'on tab' || r.isTab === true;
+                        if (!isTab) return false;
+
+                        const rideDate = new Date(r.date || r.timestamp);
+                        if (isNaN(rideDate)) return true;
+
+                        if (filter === 'today') {
+                            return rideDate.toDateString() === now.toDateString();
+                        } else if (filter === 'this-week') {
+                            const startOfWeek = new Date(now);
+                            startOfWeek.setDate(now.getDate() - now.getDay());
+                            startOfWeek.setHours(0,0,0,0);
+                            return rideDate >= startOfWeek;
+                        }
+                        return true;
+                    });
+
+                    // Sort newest first
+                    tabRides.sort((a, b) => new Date(b.date || b.timestamp) - new Date(a.date || a.timestamp));
+
+                    if (tabRides.length === 0) {
+                        container.innerHTML = `<p class="text-gray-500 p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs sm:text-sm">No "On-Tab" rides found for this period.</p>`;
+                        return;
+                    }
+
+                    // Map each ride into a clean, mobile-optimized card layout
+                    container.innerHTML = tabRides.map((ride) => {
+                        const clientName = ride.client || 'Unknown Client';
+                        const rideDate = new Date(ride.date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+                        const amount = parseFloat(ride.amount || 0);
+                        const currencySymbol = ride.currency === 'USD' ? '$' : 'LBP ';
+                        const pickup = ride.from || 'N/A';
+                        const dropoff = ride.to || 'N/A';
+                        const driverObj = drivers.find(d => d.id === ride.driverId);
+                        const driverName = driverObj ? driverObj.name : 'N/A';
+
+                        return `
+                            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                <div class="w-full sm:w-auto">
+                                    <!-- Clicking name jumps to client card -->
+                                    <h3 class="font-bold text-sm sm:text-base text-brand-700 cursor-pointer hover:underline flex items-center gap-1.5" onclick="jumpToClientCard('${encodeURIComponent(clientName)}')">
+                                        <i class="fa-solid fa-user text-xs"></i> ${clientName}
+                                    </h3>
+                                    <p class="text-xs text-slate-600 mt-0.5">Route: ${pickup} &rarr; ${dropoff}</p>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">Date: ${rideDate} &bull; Driver: ${driverName}</p>
+                                </div>
+
+                                <div class="flex items-center justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                    <span class="font-extrabold text-base sm:text-lg text-slate-900">${currencySymbol}${amount.toLocaleString()}</span>
+                                    <div class="flex gap-2">
+                                        <button onclick="generateSingleRideInvoice('${encodeURIComponent(clientName)}', ${amount}, '${pickup}', '${dropoff}', '${rideDate}', '${ride.currency || 'USD'}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm flex items-center gap-1 transition-all">
+                                            <i class="fa-brands fa-whatsapp text-sm"></i> Invoice
+                                        </button>
+                                        <button onclick="jumpToClientCard('${encodeURIComponent(clientName)}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm transition-all">
+                                            Client &rarr;
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                // 2. Generate WhatsApp Single-Ride Invoice
+                function generateSingleRideInvoice(encodedClientName, amount, pickup, dropoff, date, currency) {
+                    const clientName = decodeURIComponent(encodedClientName);
+                    const clientObj = clients.find(c => (c.name || '').toLowerCase() === clientName.toLowerCase());
+                    const phone = clientObj ? (clientObj.phone || '') : '';
+                    const symbol = currency === 'USD' ? '$' : 'LBP ';
+
+                    const invoiceText = `*ONE MINUTE TAXI - INVOICE*\n` +
+                                        `-------------------\n` +
+                                        `Client: *${clientName}*\n` +
+                                        `Date: ${date}\n` +
+                                        `Trip: ${pickup} ➔ ${dropoff}\n` +
+                                        `Amount Due: *${symbol}${amount.toLocaleString()}*\n` +
+                                        `-------------------\n` +
+                                        `Thank you for your business!`;
+
+                    if (phone) {
+                        const cleanPhone = phone.replace(/[^0-9]/g, '');
+                        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(invoiceText)}`;
+                        window.open(whatsappUrl, '_blank');
+                    } else {
+                        navigator.clipboard.writeText(invoiceText).then(() => {
+                            alert(`Invoice copied to clipboard for ${clientName} (${symbol}${amount})! You can now paste it in WhatsApp.`);
+                        }).catch(() => {
+                            prompt("Copy invoice text:", invoiceText);
+                        });
+                    }
+                }
+
+                // 3. Intelligent Jump to Client Card in Clients Tab
+                function jumpToClientCard(encodedClientName) {
+                    const clientName = decodeURIComponent(encodedClientName);
+
+                    // Switch to clients tab
+                    switchTab('tabs');
+
+                    // Trigger drill-down view or search filter for this client
+                    setTimeout(() => {
+                        if (typeof selectedClientDetail !== 'undefined') {
+                            selectedClientDetail = clientName;
+                            if (typeof renderClientTabs === 'function') renderClientTabs();
+                        } else {
+                            const searchInput = document.getElementById('client-search-input');
+                            if (searchInput) {
+                                searchInput.value = clientName;
+                                searchInput.dispatchEvent(new Event('keyup'));
+                            }
+                        }
+                    }, 100);
+                }
 
         // --- APP INIT ---
         window.onload = function() {
