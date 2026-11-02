@@ -67,6 +67,12 @@
                     <span class="font-bold text-slate-900 hidden sm:inline">One Minute Taxi</span>
                 </div>
 
+                <!-- Live Rate Limit Status Badge -->
+                                <div id="api-limit-badge" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600 border border-slate-200">
+                                    <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i>
+                                    <span id="api-limit-text">GitHub API: Checking...</span>
+                                </div>
+
                 <!-- Desktop Navigation Tabs -->
                 <nav class="hidden md:flex space-x-1 bg-slate-100 p-1 rounded-xl text-sm font-medium">
                     <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded-lg transition-all text-slate-600 hover:text-slate-900">
@@ -795,6 +801,25 @@
         </div>
     </div>
 
+    <!-- MODAL: RATE LIMIT EXCEEDED WARNING -->
+        <div id="rate-limit-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl text-center space-y-4 border border-amber-200">
+                <div class="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-900">GitHub API Limit Reached!</h3>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                    You have exhausted your GitHub Gist API quota. Changes are currently saving locally on this device only. Please stop editing until quota resets at:
+                </p>
+                <div class="bg-slate-100 p-3 rounded-xl border border-slate-200">
+                    <span id="rate-limit-reset-time" class="text-base font-extrabold text-amber-600">--:--</span>
+                </div>
+                <button onclick="closeModal('rate-limit-modal')" class="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-md transition-all">
+                    Understood, I'll Wait
+                </button>
+            </div>
+        </div>
+
     <!-- APPLICATION JAVASCRIPT (GITHUB GIST SYNC) -->
     <script>
         // --- GITHUB GIST & OFFLINE-FIRST CONFIGURATION ---
@@ -873,6 +898,10 @@
                     try {
                         if (!cachedGistId) {
                             const searchRes = await fetch(`https://api.github.com/gists`, { headers: authHeaders });
+
+                            // Live Rate Limit Tracker Hook
+                            updateRateLimitHeaders(searchRes);
+
                             if (searchRes.ok) {
                                 const gists = await searchRes.json();
                                 const target = gists.find(g =>
@@ -897,6 +926,10 @@
                                     }
                                 })
                             });
+
+                            // Live Rate Limit Tracker Hook
+                            updateRateLimitHeaders(patchRes);
+
                         }
                     } catch (e) {
                         console.warn('Background cloud save deferred:', e);
@@ -939,6 +972,10 @@
                     try {
                         if (!cachedGistId) {
                             const res = await fetch(`https://api.github.com/gists`, { headers: authHeaders });
+
+                            // Live Rate Limit Tracker Hook
+                            updateRateLimitHeaders(res);
+
                             const remaining = res.headers.get('x-ratelimit-remaining');
                             if (remaining && parseInt(remaining) === 0) {
                                 throw new Error('Rate limit exhausted.');
@@ -961,6 +998,10 @@
 
                         if (cachedGistId) {
                             const res = await fetch(`https://api.github.com/gists/${cachedGistId}`, { headers: authHeaders });
+
+                            // Live Rate Limit Tracker Hook
+                            updateRateLimitHeaders(res);
+
                             if (res.ok) {
                                 const gistData = await res.json();
                                 if (gistData && gistData.files && gistData.files[GIST_FILENAME]) {
@@ -3364,6 +3405,39 @@ async function downloadClientInvoicePDF(clientName) {
                         }
                     }, 100);
                 }
+
+                // Check and update API rate limit status from response headers
+        function updateRateLimitHeaders(response) {
+            const remaining = response.headers.get('x-ratelimit-remaining');
+            const resetTimestamp = response.headers.get('x-ratelimit-reset');
+            const badgeText = document.getElementById('api-limit-text');
+            const badgeContainer = document.getElementById('api-limit-badge');
+
+            if (!remaining || !resetTimestamp) return;
+
+            const remainingCount = parseInt(remaining, 10);
+            const resetDate = new Date(parseInt(resetTimestamp, 10) * 1000);
+            const timeString = resetDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            if (badgeText) {
+                badgeText.innerText = `API Left: ${remainingCount}/5000`;
+            }
+
+            if (badgeContainer) {
+                if (remainingCount < 50) {
+                    badgeContainer.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-amber-50 rounded-xl text-xs font-semibold text-amber-700 border border-amber-200";
+                } else {
+                    badgeContainer.className = "hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600 border border-slate-200";
+                }
+            }
+
+            // If limit hits 0, trigger warning modal
+            if (remainingCount === 0) {
+                const resetTimeElem = document.getElementById('rate-limit-reset-time');
+                if (resetTimeElem) resetTimeElem.innerText = timeString;
+                document.getElementById('rate-limit-modal').classList.remove('hidden');
+            }
+        }
 
         // --- APP INIT ---
         window.onload = function() {
