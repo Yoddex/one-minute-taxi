@@ -359,7 +359,7 @@
                             <p class="text-xs text-slate-500">Quickly filter and send single-ride invoices via WhatsApp</p>
                         </div>
                         <select id="tab-time-filter" onchange="renderRecentTab()" class="bg-slate-50 border border-slate-300 text-xs sm:text-sm rounded-xl px-3 py-2 font-medium focus:ring-2 focus:ring-brand-500 focus:outline-none w-full sm:w-auto">
-                            <option value="today">Today</option>
+                            <option value="yesterday">Yesterday</option>
                             <option value="this-week" selected>This Week</option>
                             <option value="all">All Unpaid Tab</option>
                         </select>
@@ -3163,8 +3163,10 @@ async function downloadClientInvoicePDF(clientName) {
                         const rideDate = new Date(r.date || r.timestamp);
                         if (isNaN(rideDate)) return true;
 
-                        if (filter === 'today') {
-                            return rideDate.toDateString() === now.toDateString();
+                        if (filter === 'yesterday') {
+                            const yesterday = new Date(now);
+                            yesterday.setDate(now.getDate() - 1);
+                            return rideDate.toDateString() === yesterday.toDateString();
                         } else if (filter === 'this-week') {
                             const startOfWeek = new Date(now);
                             startOfWeek.setDate(now.getDate() - now.getDay());
@@ -3220,34 +3222,104 @@ async function downloadClientInvoicePDF(clientName) {
                     }).join('');
                 }
 
-                // 2. Generate WhatsApp Single-Ride Invoice
-                function generateSingleRideInvoice(encodedClientName, amount, pickup, dropoff, date, currency) {
-                    const clientName = decodeURIComponent(encodedClientName);
-                    const clientObj = clients.find(c => (c.name || '').toLowerCase() === clientName.toLowerCase());
-                    const phone = clientObj ? (clientObj.phone || '') : '';
-                    const symbol = currency === 'USD' ? '$' : 'LBP ';
+                // 2. Generate Single-Ride Invoice PDF and open in a new tab
+                        async function generateSingleRideInvoice(encodedClientName, amount, pickup, dropoff, date, currency) {
+                            const clientName = decodeURIComponent(encodedClientName);
+                            const symbol = currency === 'USD' ? '$' : 'LBP ';
 
-                    const invoiceText = `*ONE MINUTE TAXI - INVOICE*\n` +
-                                        `-------------------\n` +
-                                        `Client: *${clientName}*\n` +
-                                        `Date: ${date}\n` +
-                                        `Trip: ${pickup} ➔ ${dropoff}\n` +
-                                        `Amount Due: *${symbol}${amount.toLocaleString()}*\n` +
-                                        `-------------------\n` +
-                                        `Thank you for your business!`;
+                            const { jsPDF } = window.jspdf || {};
+                            if (!jsPDF) {
+                                alert('jsPDF library is not loaded.');
+                                return;
+                            }
 
-                    if (phone) {
-                        const cleanPhone = phone.replace(/[^0-9]/g, '');
-                        const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(invoiceText)}`;
-                        window.open(whatsappUrl, '_blank');
-                    } else {
-                        navigator.clipboard.writeText(invoiceText).then(() => {
-                            alert(`Invoice copied to clipboard for ${clientName} (${symbol}${amount})! You can now paste it in WhatsApp.`);
-                        }).catch(() => {
-                            prompt("Copy invoice text:", invoiceText);
-                        });
-                    }
-                }
+                            const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                            // Build styled HTML template for the single ride PDF
+                            const element = document.createElement('div');
+                            element.style.width = '700px';
+                            element.style.background = '#ffffff';
+                            element.style.padding = '25px';
+                            element.style.boxSizing = 'border-box';
+                            element.style.fontFamily = 'Arial, sans-serif';
+
+                            element.innerHTML = `
+                                <div style="width: 100%; color: #1e293b; background-color: #ffffff;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 12px; margin-bottom: 20px;">
+                                        <div>
+                                            <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
+                                            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Dispatch & Client Billing &bull; Tel: 03 543 736</p>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <h2 style="font-size: 16px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Invoice</h2>
+                                            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Date: ${todayDate}</p>
+                                        </div>
+                                    </div>
+
+                                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+                                        <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 2px 0;">Billed To:</p>
+                                        <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
+                                    </div>
+
+                                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
+                                        <thead>
+                                            <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
+                                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 22%;">Date</th>
+                                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 58%;">Trip Details / Route</th>
+                                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Amount</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                <td style="padding: 8px; color: #64748b; vertical-align: top;">${date}</td>
+                                                <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">
+                                                    ${pickup} &rarr; ${dropoff}
+                                                    <span style="display: block; font-size: 8px; font-weight: 700; color: #10b981; margin-top: 2px;">ON TAB RIDE</span>
+                                                </td>
+                                                <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">${symbol}${amount.toLocaleString()}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+
+                                    <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
+                                        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: #15803d; font-size: 11px;">
+                                            Total Due: ${symbol}${amount.toLocaleString()}
+                                        </div>
+                                    </div>
+
+                                    <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; font-size: 9px; color: #94a3b8;">
+                                        <p style="margin: 0;">Thank you for choosing One Minute Taxi!</p>
+                                    </div>
+                                </div>
+                            `;
+
+                            element.style.position = 'absolute';
+                            element.style.left = '-9999px';
+                            element.style.top = '0';
+                            document.body.appendChild(element);
+
+                            try {
+                                const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
+                                const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+                                const pdf = new jsPDF('p', 'mm', 'a4');
+                                const pdfWidth = pdf.internal.pageSize.getWidth();
+                                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
+
+                                const pdfBlob = pdf.output('blob');
+                                const blobUrl = URL.createObjectURL(pdfBlob);
+                                window.open(blobUrl, '_blank');
+                            } catch (err) {
+                                console.error('PDF Error:', err);
+                                alert('Error generating invoice PDF: ' + err.message);
+                            } finally {
+                                if (document.body.contains(element)) {
+                                    document.body.removeChild(element);
+                                }
+                            }
+                        }
 
                 // 3. Intelligent Jump to Client Card in Clients Tab
                 function jumpToClientCard(encodedClientName) {
