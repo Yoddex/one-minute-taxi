@@ -67,10 +67,10 @@
                     <span class="font-bold text-slate-900 hidden sm:inline">One Minute Taxi</span>
                 </div>
 
-                <!-- Live Rate Limit Status Badge (Hidden on mobile, visible on desktop) -->
-                <div id="api-limit-badge" class="hidden md:flex items-center space-x-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                <!-- Live Rate Limit Status Badge -->
+                <div id="api-limit-badge" class="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-slate-100 rounded-xl text-xs font-semibold text-slate-600 border border-slate-200">
                     <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i>
-                    <span id="api-limit-text">API Left: 5000/5000</span>
+                    <span id="api-limit-text">GitHub API: Checking...</span>
                 </div>
 
                 <!-- Desktop Navigation Tabs -->
@@ -3423,9 +3423,9 @@ async function downloadClientInvoicePDF(clientName) {
 
             if (badgeContainer) {
                 if (remainingCount < 50) {
-                    badgeContainer.className = "flex items-center space-x-1.5 px-2.5 py-1 text-xs font-semibold text-amber-600";
+                    badgeContainer.className = "hidden sm:flex items-center space-x-1.5 px-2.5 py-1 text-xs font-semibold text-amber-600";
                 } else {
-                    badgeContainer.className = "flex items-center space-x-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600";
+                    badgeContainer.className = "hidden sm:flex items-center space-x-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600";
                 }
             }
 
