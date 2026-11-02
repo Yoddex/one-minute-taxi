@@ -3209,7 +3209,7 @@ async function downloadClientInvoicePDF(clientName) {
                                 <div class="flex items-center justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                                     <span class="font-extrabold text-base sm:text-lg text-slate-900">${currencySymbol}${amount.toLocaleString()}</span>
                                     <div class="flex gap-2">
-                                        <button onclick="generateSingleRideInvoice('${encodeURIComponent(clientName)}', ${amount}, '${pickup}', '${dropoff}', '${rideDate}', '${ride.currency || 'USD'}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm flex items-center gap-1 transition-all">
+                                        <button onclick="generateSingleRideInvoice('${ride.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm flex items-center gap-1 transition-all">
                                             <i class="fa-brands fa-whatsapp text-sm"></i> Invoice
                                         </button>
                                         <button onclick="jumpToClientCard('${encodeURIComponent(clientName)}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm transition-all">
@@ -3222,10 +3222,21 @@ async function downloadClientInvoicePDF(clientName) {
                     }).join('');
                 }
 
-                // 2. Generate Single-Ride Invoice PDF and open in a new tab
-                        async function generateSingleRideInvoice(encodedClientName, amount, pickup, dropoff, date, currency) {
-                            const clientName = decodeURIComponent(encodedClientName);
+                // 2. Generate Single-Ride Invoice PDF and open in a new tab using Ride ID
+                        async function generateSingleRideInvoice(rideId) {
+                            const ride = rides.find(r => r.id === rideId);
+                            if (!ride) {
+                                alert('Ride details not found.');
+                                return;
+                            }
+
+                            const clientName = ride.client || 'Unknown Client';
+                            const amount = parseFloat(ride.amount || 0);
+                            const currency = ride.currency || 'USD';
                             const symbol = currency === 'USD' ? '$' : 'LBP ';
+                            const pickup = ride.from || 'N/A';
+                            const dropoff = ride.to || 'N/A';
+                            const date = new Date(ride.date).toLocaleDateString();
 
                             const { jsPDF } = window.jspdf || {};
                             if (!jsPDF) {
@@ -3235,7 +3246,6 @@ async function downloadClientInvoicePDF(clientName) {
 
                             const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-                            // Build styled HTML template for the single ride PDF
                             const element = document.createElement('div');
                             element.style.width = '700px';
                             element.style.background = '#ffffff';
@@ -3287,7 +3297,7 @@ async function downloadClientInvoicePDF(clientName) {
                                         </div>
                                     </div>
 
-                                    <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; font-size: 9px; color: #94a3b8;">
+                                    <div style="border-top: 1px solid #e2e8f0; paddingTop: 12px; text-align: center; font-size: 9px; color: #94a3b8;">
                                         <p style="margin: 0;">Thank you for choosing One Minute Taxi!</p>
                                     </div>
                                 </div>
