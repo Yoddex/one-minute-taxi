@@ -3222,10 +3222,14 @@ async function downloadClientInvoicePDF(clientName) {
                     }).join('');
                 }
 
-                // 2. Generate Single-Ride Invoice PDF and open in a new tab using Ride ID
+                // 2. Generate Single-Ride Invoice PDF (Opens instantly on first click)
                         async function generateSingleRideInvoice(rideId) {
+                            // Open blank tab IMMEDIATELY on click to bypass popup blockers
+                            const targetWindow = window.open('about:blank', '_blank');
+
                             const ride = rides.find(r => r.id === rideId);
                             if (!ride) {
+                                if (targetWindow) targetWindow.close();
                                 alert('Ride details not found.');
                                 return;
                             }
@@ -3240,6 +3244,7 @@ async function downloadClientInvoicePDF(clientName) {
 
                             const { jsPDF } = window.jspdf || {};
                             if (!jsPDF) {
+                                if (targetWindow) targetWindow.close();
                                 alert('jsPDF library is not loaded.');
                                 return;
                             }
@@ -3297,7 +3302,7 @@ async function downloadClientInvoicePDF(clientName) {
                                         </div>
                                     </div>
 
-                                    <div style="border-top: 1px solid #e2e8f0; paddingTop: 12px; text-align: center; font-size: 9px; color: #94a3b8;">
+                                    <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; font-size: 9px; color: #94a3b8;">
                                         <p style="margin: 0;">Thank you for choosing One Minute Taxi!</p>
                                     </div>
                                 </div>
@@ -3320,8 +3325,15 @@ async function downloadClientInvoicePDF(clientName) {
 
                                 const pdfBlob = pdf.output('blob');
                                 const blobUrl = URL.createObjectURL(pdfBlob);
-                                window.open(blobUrl, '_blank');
+
+                                // Populate the pre-opened tab instantly
+                                if (targetWindow) {
+                                    targetWindow.location.href = blobUrl;
+                                } else {
+                                    window.open(blobUrl, '_blank');
+                                }
                             } catch (err) {
+                                if (targetWindow) targetWindow.close();
                                 console.error('PDF Error:', err);
                                 alert('Error generating invoice PDF: ' + err.message);
                             } finally {
