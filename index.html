@@ -3248,7 +3248,7 @@ async function downloadClientInvoicePDF(clientName) {
                                 <div class="flex items-center justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                                     <span class="font-extrabold text-base sm:text-lg text-slate-900">${currencySymbol}${amount.toLocaleString()}</span>
                                     <div class="flex gap-2">
-                                        <button onclick="generateSingleRideInvoice('${ride.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm flex items-center gap-1 transition-all">
+                                        <button onclick="generateSingleRideInvoice('${ride.id}')" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm flex items-center gap-1 transition-all">
                                             <i class="fa-brands fa-whatsapp text-sm"></i> Invoice
                                         </button>
                                         <button onclick="jumpToClientCard('${encodeURIComponent(clientName)}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm transition-all">
