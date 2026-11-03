@@ -3301,22 +3301,26 @@ async function downloadClientInvoicePDF(clientName) {
             container.innerHTML = sortedClients.map((group) => {
                 const encodedName = encodeURIComponent(group.clientName);
 
+                // Grab only the top 3 most recent rides for display
+                const visibleRides = group.rides.slice(0, 3);
+                const hiddenCount = group.rides.length - visibleRides.length;
+
                 return `
                     <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col gap-3">
                         <!-- Client Header -->
                         <div class="flex justify-between items-center border-b border-slate-100 pb-2">
                             <h3 class="font-bold text-sm sm:text-base text-brand-700 cursor-pointer hover:underline flex items-center gap-1.5" onclick="jumpToClientCard('${encodedName}')">
                                 <i class="fa-solid fa-user text-xs"></i> ${group.clientName}
-                                <span class="text-xs text-slate-400 font-normal">(${group.rides.length} ride${group.rides.length > 1 ? 's' : ''})</span>
+                                <span class="text-xs text-slate-400 font-normal">(${group.rides.length} total ride${group.rides.length > 1 ? 's' : ''})</span>
                             </h3>
                             <button onclick="jumpToClientCard('${encodedName}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 py-1.5 rounded-xl font-semibold shadow-sm transition-all">
                                 Client &rarr;
                             </button>
                         </div>
 
-                        <!-- Rides List for this Client -->
+                        <!-- Rides List for this Client (Capped to Max 3) -->
                         <div class="flex flex-col gap-2">
-                            ${group.rides.map(ride => {
+                            ${visibleRides.map(ride => {
                                 const rideDate = new Date(ride.date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
                                 const amount = parseFloat(ride.amount || 0);
                                 const currencySymbol = ride.currency === 'USD' ? '$' : 'LBP ';
@@ -3335,6 +3339,15 @@ async function downloadClientInvoicePDF(clientName) {
                                     </div>
                                 `;
                             }).join('')}
+
+                            <!-- Overflow indicator if they have more than 3 rides -->
+                            ${hiddenCount > 0 ? `
+                                <div class="text-center pt-1">
+                                    <span class="text-[11px] font-medium text-slate-400 italic cursor-pointer hover:text-brand-600" onclick="jumpToClientCard('${encodedName}')">
+                                        + ${hiddenCount} older ride(s) hidden &bull; View all in Client Tab &rarr;
+                                    </span>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
