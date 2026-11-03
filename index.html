@@ -3079,7 +3079,7 @@ async function downloadClientInvoicePDF(clientName) {
                     heightLeft -= pdfPageHeight;
                 }
 
-                const fileName = `Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+                const fileName = `Statement_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
                 const pdfBlob = pdf.output('blob');
                 const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
