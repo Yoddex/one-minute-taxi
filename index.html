@@ -3232,223 +3232,136 @@ async function downloadClientInvoicePDF(clientName) {
             switchTab(activeTab);
         }
 
-        // 1. Render Recent Tab List (Optimized for Mobile & Desktop)
-                function renderRecentTab() {
-                    const filter = document.getElementById('tab-time-filter')?.value || 'this-week';
-                    const container = document.getElementById('recent-tab-list');
-                    if (!container) return;
+        // 1. Render Recent Tab List (Grouped by client, sorted by newest activity)
+        function renderRecentTab() {
+            const filter = document.getElementById('tab-time-filter')?.value || 'this-week';
+            const container = document.getElementById('recent-tab-list');
+            if (!container) return;
 
-                    const now = new Date();
+            const now = new Date();
 
-                    // Filter rides where payment type is 'Tab'
-                    const tabRides = rides.filter(r => {
-                        const isTab = (r.type || '').toLowerCase() === 'on tab' || r.isTab === true;
-                        if (!isTab) return false;
+            // Filter rides where payment type is 'Tab'
+            const tabRides = rides.filter(r => {
+                const isTab = (r.type || '').toLowerCase() === 'on tab' || r.isTab === true;
+                if (!isTab) return false;
 
-                        const rideDate = new Date(r.date || r.timestamp);
-                        if (isNaN(rideDate)) return true;
+                const rideDate = new Date(r.date || r.timestamp);
+                if (isNaN(rideDate)) return true;
 
-                        if (filter === 'yesterday') {
-                            const yesterday = new Date(now);
-                            yesterday.setDate(now.getDate() - 1);
-                            return rideDate.toDateString() === yesterday.toDateString();
-                        } else if (filter === 'this-week') {
-                            const startOfWeek = new Date(now);
-                            startOfWeek.setDate(now.getDate() - now.getDay());
-                            startOfWeek.setHours(0,0,0,0);
-                            return rideDate >= startOfWeek;
-                        }
-                        return true;
-                    });
+                if (filter === 'yesterday') {
+                    const yesterday = new Date(now);
+                    yesterday.setDate(now.getDate() - 1);
+                    return rideDate.toDateString() === yesterday.toDateString();
+                } else if (filter === 'this-week') {
+                    const startOfWeek = new Date(now);
+                    startOfWeek.setDate(now.getDate() - now.getDay());
+                    startOfWeek.setHours(0,0,0,0);
+                    return rideDate >= startOfWeek;
+                }
+                return true;
+            });
 
-                    // Sort newest first
-                    tabRides.sort((a, b) => new Date(b.date || b.timestamp) - new Date(a.date || a.timestamp));
+            if (tabRides.length === 0) {
+                container.innerHTML = `<p class="text-gray-500 p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs sm:text-sm">No "On-Tab" rides found for this period.</p>`;
+                return;
+            }
 
-                    if (tabRides.length === 0) {
-                        container.innerHTML = `<p class="text-gray-500 p-6 bg-white rounded-2xl border border-slate-200 text-center text-xs sm:text-sm">No "On-Tab" rides found for this period.</p>`;
-                        return;
-                    }
+            // --- GROUP RIDES BY CLIENT & TRACK LATEST TIMESTAMP ---
+            const clientGroups = {};
 
-                    // Map each ride into a clean, mobile-optimized card layout
-                    container.innerHTML = tabRides.map((ride) => {
-                        const clientName = ride.client || 'Unknown Client';
-                        const rideDate = new Date(ride.date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
-                        const amount = parseFloat(ride.amount || 0);
-                        const currencySymbol = ride.currency === 'USD' ? '$' : 'LBP ';
-                        const pickup = ride.from || 'N/A';
-                        const dropoff = ride.to || 'N/A';
-                        const driverObj = drivers.find(d => d.id === ride.driverId);
-                        const driverName = driverObj ? driverObj.name : 'N/A';
+            tabRides.forEach(r => {
+                const cName = (r.client || 'Unknown Client').trim();
+                const cKey = cName.toLowerCase();
 
-                        return `
-                            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                <div class="w-full sm:w-auto">
-                                    <!-- Clicking name jumps to client card -->
-                                    <h3 class="font-bold text-sm sm:text-base text-brand-700 cursor-pointer hover:underline flex items-center gap-1.5" onclick="jumpToClientCard('${encodeURIComponent(clientName)}')">
-                                        <i class="fa-solid fa-user text-xs"></i> ${clientName}
-                                    </h3>
-                                    <p class="text-xs text-slate-600 mt-0.5">Route: ${pickup} &rarr; ${dropoff}</p>
-                                    <p class="text-[11px] text-slate-400 mt-0.5">Date: ${rideDate} &bull; Driver: ${driverName}</p>
-                                </div>
-
-                                <div class="flex items-center justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                                    <span class="font-extrabold text-base sm:text-lg text-slate-900">${currencySymbol}${amount.toLocaleString()}</span>
-                                    <div class="flex gap-2">
-                                        <button onclick="generateSingleRideInvoice('${ride.id}')" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm flex items-center gap-1 transition-all">
-                                            <i class="fa-brands fa-whatsapp text-sm"></i> Invoice
-                                        </button>
-                                        <button onclick="jumpToClientCard('${encodeURIComponent(clientName)}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm transition-all">
-                                            Client &rarr;
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
+                if (!clientGroups[cKey]) {
+                    clientGroups[cKey] = {
+                        clientName: cName,
+                        rides: [],
+                        latestTimestamp: 0
+                    };
                 }
 
-                // 2. Generate Single-Ride Invoice PDF (Opens instantly on first click)
-                        async function generateSingleRideInvoice(rideId) {
-                            // Open blank tab IMMEDIATELY on click to bypass popup blockers
-                            const targetWindow = window.open('about:blank', '_blank');
+                clientGroups[cKey].rides.push(r);
 
-                            const ride = rides.find(r => r.id === rideId);
-                            if (!ride) {
-                                if (targetWindow) targetWindow.close();
-                                alert('Ride details not found.');
-                                return;
-                            }
+                const rideTime = new Date(r.date || r.timestamp).getTime();
+                if (rideTime > clientGroups[cKey].latestTimestamp) {
+                    clientGroups[cKey].latestTimestamp = rideTime;
+                }
+            });
 
-                            const clientName = ride.client || 'Unknown Client';
-                            const amount = parseFloat(ride.amount || 0);
-                            const currency = ride.currency || 'USD';
-                            const symbol = currency === 'USD' ? '$' : 'LBP ';
-                            const pickup = ride.from || 'N/A';
-                            const dropoff = ride.to || 'N/A';
-                            const date = new Date(ride.date).toLocaleDateString();
+            // Sort individual rides inside each client group from newest to oldest
+            Object.values(clientGroups).forEach(group => {
+                group.rides.sort((a, b) => new Date(b.date || b.timestamp) - new Date(a.date || a.timestamp));
+            });
 
-                            const { jsPDF } = window.jspdf || {};
-                            if (!jsPDF) {
-                                if (targetWindow) targetWindow.close();
-                                alert('jsPDF library is not loaded.');
-                                return;
-                            }
+            // Sort client cards by their newest ride timestamp (newest active client at the top)
+            const sortedClients = Object.values(clientGroups).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
 
-                            const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            // Map each client group into a clean, mobile-optimized card layout
+            container.innerHTML = sortedClients.map((group) => {
+                const encodedName = encodeURIComponent(group.clientName);
 
-                            const element = document.createElement('div');
-                            element.style.width = '700px';
-                            element.style.background = '#ffffff';
-                            element.style.padding = '25px';
-                            element.style.boxSizing = 'border-box';
-                            element.style.fontFamily = 'Arial, sans-serif';
+                return `
+                    <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col gap-3">
+                        <!-- Client Header -->
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                            <h3 class="font-bold text-sm sm:text-base text-brand-700 cursor-pointer hover:underline flex items-center gap-1.5" onclick="jumpToClientCard('${encodedName}')">
+                                <i class="fa-solid fa-user text-xs"></i> ${group.clientName}
+                                <span class="text-xs text-slate-400 font-normal">(${group.rides.length} ride${group.rides.length > 1 ? 's' : ''})</span>
+                            </h3>
+                            <button onclick="jumpToClientCard('${encodedName}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 py-1.5 rounded-xl font-semibold shadow-sm transition-all">
+                                Client &rarr;
+                            </button>
+                        </div>
 
-                            element.innerHTML = `
-                                <div style="width: 100%; color: #1e293b; background-color: #ffffff;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 12px; margin-bottom: 20px;">
+                        <!-- Rides List for this Client -->
+                        <div class="flex flex-col gap-2">
+                            ${group.rides.map(ride => {
+                                const rideDate = new Date(ride.date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+                                const amount = parseFloat(ride.amount || 0);
+                                const currencySymbol = ride.currency === 'USD' ? '$' : 'LBP ';
+                                const pickup = ride.from || 'N/A';
+                                const dropoff = ride.to || 'N/A';
+                                const driverObj = drivers.find(d => d.id === ride.driverId);
+                                const driverName = driverObj ? driverObj.name : 'N/A';
+
+                                return `
+                                    <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-xs">
                                         <div>
-                                            <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
-                                            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Dispatch & Client Billing &bull; Tel: 03 543 736</p>
+                                            <p class="font-semibold text-slate-800">Route: ${pickup} &rarr; ${dropoff}</p>
+                                            <p class="text-[11px] text-slate-400 mt-0.5">Date: ${rideDate} &bull; Driver: ${driverName}</p>
                                         </div>
-                                        <div style="text-align: right;">
-                                            <h2 style="font-size: 16px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Invoice</h2>
-                                            <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Date: ${todayDate}</p>
-                                        </div>
+                                        <span class="font-extrabold text-sm sm:text-base text-slate-900">${currencySymbol}${amount.toLocaleString()}</span>
                                     </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
-                                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 20px;">
-                                        <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 2px 0;">Billed To:</p>
-                                        <h3 style="font-size: 15px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
-                                    </div>
+        // 2. Intelligent Jump to Client Card in Clients Tab
+        function jumpToClientCard(encodedClientName) {
+            const clientName = decodeURIComponent(encodedClientName);
 
-                                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 10px; table-layout: fixed;">
-                                        <thead>
-                                            <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 9px; font-weight: 700; text-align: left;">
-                                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 22%;">Date</th>
-                                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; width: 58%;">Trip Details / Route</th>
-                                                <th style="padding: 8px; border-bottom: 1px solid #cbd5e1; text-align: right; width: 20%;">Amount</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                                <td style="padding: 8px; color: #64748b; vertical-align: top;">${date}</td>
-                                                <td style="padding: 8px; font-weight: 600; color: #1e293b; vertical-align: top; word-break: break-word;">
-                                                    ${pickup} &rarr; ${dropoff}
-                                                    <span style="display: block; font-size: 8px; font-weight: 700; color: #10b981; margin-top: 2px;">ON TAB RIDE</span>
-                                                </td>
-                                                <td style="padding: 8px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">${symbol}${amount.toLocaleString()}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+            // Switch to clients tab
+            switchTab('tabs');
 
-                                    <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
-                                        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: #15803d; font-size: 11px;">
-                                            Total Due: ${symbol}${amount.toLocaleString()}
-                                        </div>
-                                    </div>
-
-                                    <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; text-align: center; font-size: 9px; color: #94a3b8;">
-                                        <p style="margin: 0;">Thank you for choosing One Minute Taxi!</p>
-                                    </div>
-                                </div>
-                            `;
-
-                            element.style.position = 'absolute';
-                            element.style.left = '-9999px';
-                            element.style.top = '0';
-                            document.body.appendChild(element);
-
-                            try {
-                                const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false });
-                                const imgData = canvas.toDataURL('image/jpeg', 0.98);
-
-                                const pdf = new jsPDF('p', 'mm', 'a4');
-                                const pdfWidth = pdf.internal.pageSize.getWidth();
-                                const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-                                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, imgHeight);
-
-                                const pdfBlob = pdf.output('blob');
-                                const blobUrl = URL.createObjectURL(pdfBlob);
-
-                                // Populate the pre-opened tab instantly
-                                if (targetWindow) {
-                                    targetWindow.location.href = blobUrl;
-                                } else {
-                                    window.open(blobUrl, '_blank');
-                                }
-                            } catch (err) {
-                                if (targetWindow) targetWindow.close();
-                                console.error('PDF Error:', err);
-                                alert('Error generating invoice PDF: ' + err.message);
-                            } finally {
-                                if (document.body.contains(element)) {
-                                    document.body.removeChild(element);
-                                }
-                            }
-                        }
-
-                // 3. Intelligent Jump to Client Card in Clients Tab
-                function jumpToClientCard(encodedClientName) {
-                    const clientName = decodeURIComponent(encodedClientName);
-
-                    // Switch to clients tab
-                    switchTab('tabs');
-
-                    // Trigger drill-down view or search filter for this client
-                    setTimeout(() => {
-                        if (typeof selectedClientDetail !== 'undefined') {
-                            selectedClientDetail = clientName;
-                            if (typeof renderClientTabs === 'function') renderClientTabs();
-                        } else {
-                            const searchInput = document.getElementById('client-search-input');
-                            if (searchInput) {
-                                searchInput.value = clientName;
-                                searchInput.dispatchEvent(new Event('keyup'));
-                            }
-                        }
-                    }, 100);
+            // Trigger drill-down view or search filter for this client
+            setTimeout(() => {
+                if (typeof selectedClientDetail !== 'undefined') {
+                    selectedClientDetail = clientName;
+                    if (typeof renderClientTabs === 'function') renderClientTabs();
+                } else {
+                    const searchInput = document.getElementById('client-search-input');
+                    if (searchInput) {
+                        searchInput.value = clientName;
+                        searchInput.dispatchEvent(new Event('keyup'));
+                    }
                 }
+            }, 100);
+        }
 
                 // Check and update API rate limit status from response headers
         function updateRateLimitHeaders(response) {
