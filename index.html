@@ -1813,57 +1813,52 @@
                 return;
             }
 
-            // --- ROBUST DATE PARSING & CUTOFF LOGIC ---
-                const now = new Date();
-                const cutoffDate = new Date(now.getFullYear(), now.getMonth(), 3); // Nov 3, 2026
+            // --- BULLETPROOF DATE NORMALIZATION & CUTOFF LOGIC ---
+            const now = new Date();
+            const curYear = now.getFullYear();
+            const curMonth = String(now.getMonth() + 1).padStart(2, '0');
 
-                const priorRides = tabRides.filter(r => {
-                    let d;
-                    const dateStr = String(r.date || '');
-                    if (dateStr.includes('/')) {
-                        const parts = dateStr.split('/');
-                        if (parts.length === 3) {
-                            d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                        } else {
-                            d = new Date(dateStr);
-                        }
-                    } else {
-                        d = new Date(dateStr);
+            // Threshold string: e.g., "2026-11-03" (Anything strictly BEFORE this goes to Balance Brought Forward)
+            const cutoffString = `${curYear}-${curMonth}-03`;
+
+            // Helper to normalize any date format (handles "01/11/2026" or ISO strings) into "YYYY-MM-DD"
+            function normalizeDateStr(dateInput) {
+                if (!dateInput) return '';
+                const str = String(dateInput).trim();
+                if (str.includes('/')) {
+                    const parts = str.split('/');
+                    if (parts.length === 3) {
+                        // Converts DD/MM/YYYY to YYYY-MM-DD
+                        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
                     }
-                    return d < cutoffDate; // Captures anything before Nov 3
-                });
+                }
+                return str.slice(0, 10);
+            }
 
-                const currentPeriodRides = tabRides.filter(r => {
-                    let d;
-                    const dateStr = String(r.date || '');
-                    if (dateStr.includes('/')) {
-                        const parts = dateStr.split('/');
-                        if (parts.length === 3) {
-                            d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                        } else {
-                            d = new Date(dateStr);
-                        }
-                    } else {
-                        d = new Date(dateStr);
-                    }
-                    return d >= cutoffDate; // Captures Nov 3 onwards
-                });
+            const priorRides = tabRides.filter(r => {
+                const normDate = normalizeDateStr(r.date);
+                return normDate < cutoffString; // Captures Nov 1 and Nov 2 (and prior)
+            });
 
-                // Calculate metrics for the single summary row
-                let priorOriginalUSD = 0;
-                let priorPaidUSD = 0;
-                let priorRemUSD = 0;
+            const currentPeriodRides = tabRides.filter(r => {
+                const normDate = normalizeDateStr(r.date);
+                return normDate >= cutoffString; // Captures Nov 3 onwards individually
+            });
 
-                priorRides.forEach(r => {
-                    const origUSD = parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1);
-                    const rem = getRideRemainingUSD(r);
-                    const paid = origUSD - rem;
-                    priorOriginalUSD += origUSD;
-                    priorPaidUSD += paid;
-                    priorRemUSD += rem;
-                });
-            
-            // ----------------------------------------------
+            // Calculate metrics for the single summary row
+            let priorOriginalUSD = 0;
+            let priorPaidUSD = 0;
+            let priorRemUSD = 0;
+
+            priorRides.forEach(r => {
+                const origUSD = parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1);
+                const rem = getRideRemainingUSD(r);
+                const paid = origUSD - rem;
+                priorOriginalUSD += origUSD;
+                priorPaidUSD += paid;
+                priorRemUSD += rem;
+            });
+            // ----------------------------------------------------
 
             let usdTotalDue = 0;
             tabRides.forEach(r => {
@@ -1916,7 +1911,7 @@
                                     <td style="padding: 10px; color: #64748b; vertical-align: top;">Prior</td>
                                     <td style="padding: 10px; font-weight: 600; color: #1e293b; vertical-align: top;">
                                         <div>Balance Brought Forward</div>
-                                        <div style="font-size: 10px; color: #64748b; font-style: italic; font-weight: normal; margin-top: 2px;">Includes ${priorRides.length} prior unsettled ride(s)</div>
+                                        <div style="font-size: 10px; color: #64748b; font-style: italic; font-weight: normal; margin-top: 2px;">Includes ${priorRides.length} prior unsettled ride(s) before Nov 3</div>
                                     </td>
                                     <td style="padding: 10px; text-align: right; color: #475569; vertical-align: top;">$${priorOriginalUSD.toFixed(2)}</td>
                                     <td style="padding: 10px; text-align: right; color: #16a34a; vertical-align: top;">${priorPaidUSD > 0.01 ? '-$' + priorPaidUSD.toFixed(2) : '$0.00'}</td>
