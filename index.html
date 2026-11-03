@@ -1813,22 +1813,22 @@
                 return;
             }
 
-            // --- CUTOFF LOGIC: 3rd Day of Current Month (Robust String Comparison) ---
+            // --- CUTOFF LOGIC: Group Nov 1 & 2 into Balance Brought Forward ---
                 const now = new Date();
                 const curYear = now.getFullYear();
                 const curMonth = String(now.getMonth() + 1).padStart(2, '0');
 
-                // Format threshold string: e.g., "2026-11-03" (Anything strictly BEFORE this is prior)
+                // Anything BEFORE November 3rd (i.e., Nov 1 and Nov 2) goes into Balance Brought Forward
                 const cutoffString = `${curYear}-${curMonth}-03`;
 
                 const priorRides = tabRides.filter(r => {
                     const rideDateStr = String(r.date).slice(0, 10);
-                    return rideDateStr < cutoffString;
+                    return rideDateStr < cutoffString; // Captures Nov 1 and Nov 2
                 });
 
                 const currentPeriodRides = tabRides.filter(r => {
                     const rideDateStr = String(r.date).slice(0, 10);
-                    return rideDateStr >= cutoffString;
+                    return rideDateStr >= cutoffString; // Captures Nov 3 onwards individually
                 });
                 
             // Calculate metrics for prior rides summary row
