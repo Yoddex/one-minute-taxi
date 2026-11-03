@@ -2983,9 +2983,9 @@
             const now = new Date();
             const curYear = now.getFullYear();
             const curMonth = String(now.getMonth() + 1).padStart(2, '0');
-            const cutoffString = `${curYear}-${curMonth}-01`;
+            const cutoffString = `${curYear}-${curMonth}-02`;
 
-            const cutoffMonthName = new Date(now.getFullYear(), now.getMonth(), 3).toLocaleString('en-US', { month: 'short' });
+            const cutoffMonthName = new Date(now.getFullYear(), now.getMonth(), 2).toLocaleString('en-US', { month: 'short' });
 
             function normalizeDateStr(dateInput) {
                 if (!dateInput) return '';
@@ -3062,7 +3062,8 @@
                                     <td style="padding: 8px; vertical-align: top; color: #64748b;">Prior</td>
                                     <td style="padding: 8px; font-weight: 600; vertical-align: top; word-break: break-word;">
                                         Balance Brought Forward
-                                        <span style="display: block; font-size: 8px; font-weight: 400; font-style: italic; color: #64748b; margin-top: 2px;">Includes ${priorRides.length} prior ride(s) before ${cutoffMonthName} 1</span>                                    </td>
+                                        <span style="display: block; font-size: 8px; font-weight: 400; font-style: italic; color: #64748b; margin-top: 2px;">Includes ${priorRides.length} prior ride(s) before ${cutoffMonthName} 2</span>
+                                    </td>
                                     <td style="padding: 8px; text-align: right; font-weight: 700; vertical-align: top;">$${priorOriginalUSD.toFixed(2)}</td>
                                 </tr>
                             ` : ''}
