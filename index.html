@@ -1813,15 +1813,24 @@
                 return;
             }
 
-            // --- CUTOFF LOGIC: 2nd Day of Current Month ---
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth(); // 0-indexed
-            const cutoffDate = new Date(currentYear, currentMonth, 2, 0, 0, 0);
+            // --- CUTOFF LOGIC: 3rd Day of Current Month (Robust String Comparison) ---
+                const now = new Date();
+                const curYear = now.getFullYear();
+                const curMonth = String(now.getMonth() + 1).padStart(2, '0');
 
-            const priorRides = tabRides.filter(r => new Date(r.date) < cutoffDate);
-            const currentPeriodRides = tabRides.filter(r => new Date(r.date) >= cutoffDate);
+                // Format threshold string: e.g., "2026-11-03" (Anything strictly BEFORE this is prior)
+                const cutoffString = `${curYear}-${curMonth}-03`;
 
+                const priorRides = tabRides.filter(r => {
+                    const rideDateStr = String(r.date).slice(0, 10);
+                    return rideDateStr < cutoffString;
+                });
+
+                const currentPeriodRides = tabRides.filter(r => {
+                    const rideDateStr = String(r.date).slice(0, 10);
+                    return rideDateStr >= cutoffString;
+                });
+                
             // Calculate metrics for prior rides summary row
             let priorOriginalUSD = 0;
             let priorPaidUSD = 0;
