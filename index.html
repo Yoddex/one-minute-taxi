@@ -1813,22 +1813,47 @@
                 return;
             }
 
-            // --- CUTOFF LOGIC: Group Nov 1 & 2 into Balance Brought Forward ---
+            // --- ROBUST DATE PARSING & CUTOFF LOGIC ---
                 const now = new Date();
-                const curYear = now.getFullYear();
-                const curMonth = String(now.getMonth() + 1).padStart(2, '0');
-
-                // Anything BEFORE November 3rd (i.e., Nov 1 and Nov 2) goes into Balance Brought Forward
-                const cutoffString = `${curYear}-${curMonth}-03`;
+                // Create cutoff date object for the 3rd of the current month at 00:00:00
+                const cutoffDate = new Date(now.getFullYear(), now.getMonth(), 3);
 
                 const priorRides = tabRides.filter(r => {
-                    const rideDateStr = String(r.date).slice(0, 10);
-                    return rideDateStr < cutoffString; // Captures Nov 1 and Nov 2
+                    // Parse ride date safely regardless of whether it's stored as YYYY-MM-DD or DD/MM/YYYY
+                    let d;
+                    const dateStr = String(r.date || '');
+                    if (dateStr.includes('/')) {
+                        // Handles DD/MM/YYYY format seen in screenshot
+                        const parts = dateStr.split('/');
+                        if (parts.length === 3) {
+                            d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                        } else {
+                            d = new Date(dateStr);
+                        }
+                    } else {
+                        d = new Date(dateStr);
+                    }
+
+                    // Strictly before the 3rd (i.e., Nov 1 and Nov 2)
+                    return d < cutoffDate;
                 });
 
                 const currentPeriodRides = tabRides.filter(r => {
-                    const rideDateStr = String(r.date).slice(0, 10);
-                    return rideDateStr >= cutoffString; // Captures Nov 3 onwards individually
+                    let d;
+                    const dateStr = String(r.date || '');
+                    if (dateStr.includes('/')) {
+                        const parts = dateStr.split('/');
+                        if (parts.length === 3) {
+                            d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+                        } else {
+                            d = new Date(dateStr);
+                        }
+                    } else {
+                        d = new Date(dateStr);
+                    }
+
+                    // On or after the 3rd (Nov 3 onwards)
+                    return d >= cutoffDate;
                 });
                 
             // Calculate metrics for prior rides summary row
