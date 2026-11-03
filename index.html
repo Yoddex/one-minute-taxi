@@ -102,42 +102,40 @@
         <!-- TAB 1: OVERALL DASHBOARD -->
         <section id="tab-dashboard" class="tab-content space-y-6">
 
-            <!-- NEW: ALL-TIME LIFETIME GROSS REVENUE CARDS -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <!-- All-Time USD Gross -->
-                <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">All-Time Gross Lifetime (USD)</p>
-                            <h3 class="text-2xl font-bold mt-1" id="dash-lifetime-gross-usd" style="color: #34d399 !important;">$0.00</h3>
-                        </div>
-                        <div class="p-2.5 rounded-xl bg-white/10 text-emerald-400">
-                            <i class="fa-solid fa-chart-line text-lg"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 pt-3 border-t border-slate-700 flex justify-between text-xs text-slate-300">
-                        <span>Lifetime Office 10%: <strong class="text-white" id="dash-lifetime-office-usd">$0.00</strong></span>
-                        <span>Lifetime Drivers 90%: <strong class="text-white" id="dash-lifetime-drivers-usd">$0.00</strong></span>
-                    </div>
-                </div>
+          <!-- TOTAL CLIENT TAB BALANCES DUE CARDS -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Total USD Tabs Due -->
+              <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
+                  <div class="flex justify-between items-start">
+                      <div>
+                          <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Total USD Owed From Tabs</p>
+                          <h3 class="text-2xl font-bold mt-1" id="dash-total-tabs-due-usd" style="color: #34d399 !important;">$0.00</h3>
+                      </div>
+                      <div class="p-2.5 rounded-xl bg-white/10 text-emerald-400">
+                          <i class="fa-solid fa-file-invoice-dollar text-lg"></i>
+                      </div>
+                  </div>
+                  <div class="mt-3 pt-3 border-t border-slate-700 flex justify-between text-xs text-slate-300">
+                      <span>Active Tab Status: <strong class="text-white">Unpaid / Partial Balances</strong></span>
+                  </div>
+              </div>
 
-                <!-- All-Time LBP Gross -->
-                <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">All-Time Gross Lifetime (LBP)</p>
-                            <h3 class="text-2xl font-bold mt-1" id="dash-lifetime-gross-lbp" style="color: #7dd3fc !important;">LBP 0</h3>
-                        </div>
-                        <div class="p-2.5 rounded-xl bg-white/10 text-blue-400">
-                            <i class="fa-solid fa-wallet text-lg"></i>
-                        </div>
-                    </div>
-                    <div class="mt-3 pt-3 border-t border-slate-700 flex justify-between text-xs text-slate-300">
-                        <span>Lifetime Office 10%: <strong class="text-white" id="dash-lifetime-office-lbp">LBP 0</strong></span>
-                        <span>Lifetime Drivers 90%: <strong class="text-white" id="dash-lifetime-drivers-lbp">LBP 0</strong></span>
-                    </div>
-                </div>
-            </div>
+              <!-- Total LBP Tabs Due -->
+              <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
+                  <div class="flex justify-between items-start">
+                      <div>
+                          <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Total LBP Owed From Tabs</p>
+                          <h3 class="text-2xl font-bold mt-1" id="dash-total-tabs-due-lbp" style="color: #7dd3fc !important;">LBP 0</h3>
+                      </div>
+                      <div class="p-2.5 rounded-xl bg-white/10 text-blue-400">
+                          <i class="fa-solid fa-wallet text-lg"></i>
+                      </div>
+                  </div>
+                  <div class="mt-3 pt-3 border-t border-slate-700 flex justify-between text-xs text-slate-300">
+                      <span>Active Tab Status: <strong class="text-white">Unpaid / Partial Balances</strong></span>
+                  </div>
+              </div>
+          </div>
 
             <!-- Summary Metric Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1156,133 +1154,146 @@
         }
 
         // --- DASHBOARD RENDERER ---
-        function renderDashboard() {
-            let totalUSD = { gross: 0, cash: 0, whish: 0, tab: 0 };
-            let totalLBP = { gross: 0, cash: 0, whish: 0, tab: 0 };
+                function renderDashboard() {
+                    let totalUSD = { gross: 0, cash: 0, whish: 0, tab: 0 };
+                    let totalLBP = { gross: 0, cash: 0, whish: 0, tab: 0 };
 
-            // NEW: All-time lifetime accumulators
-            let lifetimeUSD = 0;
-            let lifetimeLBP = 0;
+                    // NEW: Total Client Tab Balances Due accumulators
+                    let totalTabsDueUSD = 0;
+                    let totalTabsDueLBP = 0;
 
-            // Calculate all-time lifetime totals from every ride ever logged
-            rides.forEach(r => {
-                const amt = parseFloat(r.amount) || 0;
-                if (r.currency === 'USD') {
-                    lifetimeUSD += amt;
-                } else {
-                    lifetimeLBP += amt;
-                }
-            });
+                    // Calculate total remaining/unpaid tab amounts for 'On Tab' rides
+                    rides.forEach(r => {
+                        const isTab = (r.type || '').toLowerCase() === 'on tab' || r.isTab === true;
+                        if (!isTab) return;
 
-            // Update All-Time Dashboard Elements
-            document.getElementById('dash-lifetime-gross-usd').innerText = `$${lifetimeUSD.toFixed(2)}`;
-            document.getElementById('dash-lifetime-office-usd').innerText = `$${(lifetimeUSD * 0.1).toFixed(2)}`;
-            document.getElementById('dash-lifetime-drivers-usd').innerText = `$${(lifetimeUSD * 0.9).toFixed(2)}`;
+                        const currency = r.currency || 'USD';
+                        const originalAmount = parseFloat(r.amount || 0);
 
-            document.getElementById('dash-lifetime-gross-lbp').innerText = `LBP ${Math.round(lifetimeLBP).toLocaleString()}`;
-            document.getElementById('dash-lifetime-office-lbp').innerText = `LBP ${Math.round(lifetimeLBP * 0.1).toLocaleString()}`;
-            document.getElementById('dash-lifetime-drivers-lbp').innerText = `LBP ${Math.round(lifetimeLBP * 0.9).toLocaleString()}`;
-
-            drivers.forEach(d => {
-                const m = calculateDriverMetrics(d.id);
-                totalUSD.gross += m.USD.gross;
-                totalUSD.cash += m.USD.cashInHand;
-                totalUSD.whish += m.USD.whishInOwner;
-                totalUSD.tab += m.USD.tabUnpaid;
-
-                totalLBP.gross += m.LBP.gross;
-                totalLBP.cash += m.LBP.cashInHand;
-                totalLBP.whish += m.LBP.whishInOwner;
-                totalLBP.tab += m.LBP.tabUnpaid;
-            });
-
-            document.getElementById('dash-gross-usd').innerText = `$${totalUSD.gross.toFixed(2)}`;
-            document.getElementById('dash-office-usd').innerText = `$${(totalUSD.gross * 0.1).toFixed(2)}`;
-            document.getElementById('dash-drivers-cut-usd').innerText = `$${(totalUSD.gross * 0.9).toFixed(2)}`;
-
-            document.getElementById('dash-gross-lbp').innerText = `LBP ${Math.round(totalLBP.gross).toLocaleString()}`;
-            document.getElementById('dash-office-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.1).toLocaleString()}`;
-            document.getElementById('dash-drivers-cut-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.9).toLocaleString()}`;
-
-            document.getElementById('dash-cash-usd').innerText = `$${totalUSD.cash.toFixed(2)}`;
-            document.getElementById('dash-whish-usd').innerText = `$${totalUSD.whish.toFixed(2)}`;
-            document.getElementById('dash-tabs-usd').innerText = `$${totalUSD.tab.toFixed(2)}`;
-
-            document.getElementById('dash-cash-lbp').innerText = `LBP ${Math.round(totalLBP.cash).toLocaleString()}`;
-            document.getElementById('dash-whish-lbp').innerText = `LBP ${Math.round(totalLBP.whish).toLocaleString()}`;
-            document.getElementById('dash-tabs-lbp').innerText = `LBP ${Math.round(totalLBP.tab).toLocaleString()}`;
-
-            const driverContainer = document.getElementById('dashboard-driver-cards');
-            driverContainer.innerHTML = '';
-
-            drivers.forEach(driver => {
-                const m = calculateDriverMetrics(driver.id);
-                const card = document.createElement('div');
-                card.className = "border border-slate-200/90 rounded-xl p-4 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all";
-
-                let usdStatus = '';
-                if (m.USD.netSettlement > 0) {
-                    usdStatus = `<span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">Owes Office $${m.USD.netSettlement.toFixed(2)}</span>`;
-                } else if (m.USD.netSettlement < 0) {
-                    usdStatus = `<span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Office Owes $${Math.abs(m.USD.netSettlement).toFixed(2)}</span>`;
-                } else {
-                    usdStatus = `<span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">USD Settled</span>`;
-                }
-
-                card.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <h4 class="font-bold text-slate-900 text-sm">${driver.name}</h4>
-                            <p class="text-[11px] text-slate-500">${m.rideCount} unsettled rides</p>
-                        </div>
-                        <button onclick="viewSpecificDriver('${driver.id}')" class="text-xs font-medium text-brand-600 hover:underline">
-                            Details &rarr;
-                        </button>
-                    </div>
-                    <div class="mt-2 pt-2 border-t border-slate-200/60 space-y-1">
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-500">USD Balance:</span>
-                            ${usdStatus}
-                        </div>
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-slate-500">Cash in Hand:</span>
-                            <span class="font-medium text-slate-800">$${m.USD.cashInHand.toFixed(2)}</span>
-                        </div>
-                    </div>
-                `;
-                driverContainer.appendChild(card);
-            });
-
-            const recentBody = document.getElementById('dash-recent-rides-body');
-            recentBody.innerHTML = '';
-            const recentRides = [...rides].reverse().slice(0, 5);
-
-            if (recentRides.length === 0) {
-                recentBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No rides recorded yet.</td></tr>`;
-            } else {
-                recentRides.forEach(r => {
-                        const d = drivers.find(drv => drv.id === r.driverId);
-                        const row = document.createElement('tr');
-                        row.className = "hover:bg-slate-50/80 transition-colors";
-
-                        let badgeColor = r.type === 'Cash' ? 'bg-emerald-100 text-emerald-800' : (r.type === 'Whish' ? 'bg-purple-100 text-purple-800' : (r.type === 'To Samer' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'));
-                        if (r.type === 'On Tab' && r.tabStatus === 'Paid') {
-                            badgeColor = 'bg-emerald-100 text-emerald-800';
+                        // Calculate remaining amount taking partial payments into account if helper exists
+                        let remainingAmount = originalAmount;
+                        if (typeof getRideRemainingUSD === 'function' && currency === 'USD') {
+                            remainingAmount = getRideRemainingUSD(r);
+                        } else if (typeof getRideRemainingLBP === 'function' && currency === 'LBP') {
+                            remainingAmount = getRideRemainingLBP(r);
+                        } else {
+                            // Fallback if fully paid
+                            if (r.tabStatus === 'Paid') remainingAmount = 0;
                         }
 
-                        row.innerHTML = `
-                            <td class="p-3 text-slate-500">${new Date(r.date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
-                            <td class="p-3 font-semibold text-slate-800">${d ? d.name : 'Unknown Driver'}</td>
-                            <td class="p-3"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${badgeColor}">${r.type}${r.type === 'On Tab' && r.tabStatus === 'Paid' ? ' (Paid)' : ''}</span></td>
-                            <td class="p-3 text-slate-600">${r.from} &rarr; ${r.to}</td>
-                            <td class="p-3 text-slate-500">${r.type === 'On Tab' ? `<strong class="text-brand-700">${r.client || 'Client Tab'}</strong>` : (r.note || '-')}</td>
-                            <td class="p-3 text-xs text-slate-500 italic max-w-xs truncate">${r.note || '-'}</td>
-                            <td class="p-3 text-right font-bold text-slate-900">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
-                        `;
-                        recentBody.appendChild(row);
+                        if (remainingAmount > 0.01) {
+                            if (currency === 'USD') {
+                                totalTabsDueUSD += remainingAmount;
+                            } else {
+                                totalTabsDueLBP += remainingAmount;
+                            }
+                        }
                     });
-            }
-        }
+
+                    // Update Total Client Tabs Due Dashboard Elements
+                    document.getElementById('dash-total-tabs-due-usd').innerText = `$${totalTabsDueUSD.toFixed(2)}`;
+                    document.getElementById('dash-total-tabs-due-lbp').innerText = `LBP ${Math.round(totalTabsDueLBP).toLocaleString()}`;
+
+                    drivers.forEach(d => {
+                        const m = calculateDriverMetrics(d.id);
+                        totalUSD.gross += m.USD.gross;
+                        totalUSD.cash += m.USD.cashInHand;
+                        totalUSD.whish += m.USD.whishInOwner;
+                        totalUSD.tab += m.USD.tabUnpaid;
+
+                        totalLBP.gross += m.LBP.gross;
+                        totalLBP.cash += m.LBP.cashInHand;
+                        totalLBP.whish += m.LBP.whishInOwner;
+                        totalLBP.tab += m.LBP.tabUnpaid;
+                    });
+
+                    document.getElementById('dash-gross-usd').innerText = `$${totalUSD.gross.toFixed(2)}`;
+                    document.getElementById('dash-office-usd').innerText = `$${(totalUSD.gross * 0.1).toFixed(2)}`;
+                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(totalUSD.gross * 0.9).toFixed(2)}`;
+
+                    document.getElementById('dash-gross-lbp').innerText = `LBP ${Math.round(totalLBP.gross).toLocaleString()}`;
+                    document.getElementById('dash-office-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.1).toLocaleString()}`;
+                    document.getElementById('dash-drivers-cut-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.9).toLocaleString()}`;
+
+                    document.getElementById('dash-cash-usd').innerText = `$${totalUSD.cash.toFixed(2)}`;
+                    document.getElementById('dash-whish-usd').innerText = `$${totalUSD.whish.toFixed(2)}`;
+                    document.getElementById('dash-tabs-usd').innerText = `$${totalUSD.tab.toFixed(2)}`;
+
+                    document.getElementById('dash-cash-lbp').innerText = `LBP ${Math.round(totalLBP.cash).toLocaleString()}`;
+                    document.getElementById('dash-whish-lbp').innerText = `LBP ${Math.round(totalLBP.whish).toLocaleString()}`;
+                    document.getElementById('dash-tabs-lbp').innerText = `LBP ${Math.round(totalLBP.tab).toLocaleString()}`;
+
+                    const driverContainer = document.getElementById('dashboard-driver-cards');
+                    driverContainer.innerHTML = '';
+
+                    drivers.forEach(driver => {
+                        const m = calculateDriverMetrics(driver.id);
+                        const card = document.createElement('div');
+                        card.className = "border border-slate-200/90 rounded-xl p-4 bg-slate-50/50 hover:bg-white hover:shadow-md transition-all";
+
+                        let usdStatus = '';
+                        if (m.USD.netSettlement > 0) {
+                            usdStatus = `<span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">Owes Office $${m.USD.netSettlement.toFixed(2)}</span>`;
+                        } else if (m.USD.netSettlement < 0) {
+                            usdStatus = `<span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">Office Owes $${Math.abs(m.USD.netSettlement).toFixed(2)}</span>`;
+                        } else {
+                            usdStatus = `<span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">USD Settled</span>`;
+                        }
+
+                        card.innerHTML = `
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h4 class="font-bold text-slate-900 text-sm">${driver.name}</h4>
+                                    <p class="text-[11px] text-slate-500">${m.rideCount} unsettled rides</p>
+                                </div>
+                                <button onclick="viewSpecificDriver('${driver.id}')" class="text-xs font-medium text-brand-600 hover:underline">
+                                    Details &rarr;
+                                </button>
+                            </div>
+                            <div class="mt-2 pt-2 border-t border-slate-200/60 space-y-1">
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">USD Balance:</span>
+                                    ${usdStatus}
+                                </div>
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-slate-500">Cash in Hand:</span>
+                                    <span class="font-medium text-slate-800">$${m.USD.cashInHand.toFixed(2)}</span>
+                                </div>
+                            </div>
+                        `;
+                        driverContainer.appendChild(card);
+                    });
+
+                    const recentBody = document.getElementById('dash-recent-rides-body');
+                    recentBody.innerHTML = '';
+                    const recentRides = [...rides].reverse().slice(0, 5);
+
+                    if (recentRides.length === 0) {
+                        recentBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No rides recorded yet.</td></tr>`;
+                    } else {
+                        recentRides.forEach(r => {
+                            const d = drivers.find(drv => drv.id === r.driverId);
+                            const row = document.createElement('tr');
+                            row.className = "hover:bg-slate-50/80 transition-colors";
+
+                            let badgeColor = r.type === 'Cash' ? 'bg-emerald-100 text-emerald-800' : (r.type === 'Whish' ? 'bg-purple-100 text-purple-800' : (r.type === 'To Samer' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'));
+                            if (r.type === 'On Tab' && r.tabStatus === 'Paid') {
+                                badgeColor = 'bg-emerald-100 text-emerald-800';
+                            }
+
+                            row.innerHTML = `
+                                <td class="p-3 text-slate-500">${new Date(r.date).toLocaleDateString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+                                <td class="p-3 font-semibold text-slate-800">${d ? d.name : 'Unknown Driver'}</td>
+                                <td class="p-3"><span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${badgeColor}">${r.type}${r.type === 'On Tab' && r.tabStatus === 'Paid' ? ' (Paid)' : ''}</span></td>
+                                <td class="p-3 text-slate-600">${r.from} &rarr; ${r.to}</td>
+                                <td class="p-3 text-slate-500">${r.type === 'On Tab' ? `<strong class="text-brand-700">${r.client || 'Client Tab'}</strong>` : (r.note || '-')}</td>
+                                <td class="p-3 text-xs text-slate-500 italic max-w-xs truncate">${r.note || '-'}</td>
+                                <td class="p-3 text-right font-bold text-slate-900">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
+                            `;
+                            recentBody.appendChild(row);
+                        });
+                    }
+                }
 
         // --- DRIVER TAB RENDERER ---
         function renderDriverTab() {
