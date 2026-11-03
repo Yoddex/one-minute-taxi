@@ -1792,187 +1792,125 @@
             `;
         }
 
-        // Function to generate and trigger the PDF download for Client Invoice
-        async function downloadClientInvoicePDF(clientName) {
-            if (typeof html2pdf === 'undefined') {
-                alert('PDF library is still loading or blocked. Please check your internet connection and try again in a moment.');
-                return;
-            }
+// Function to generate and trigger the PDF download for Client Invoice
+async function downloadClientInvoicePDF(clientName) {
+    if (typeof html2pdf === 'undefined') {
+        alert('PDF library is still loading or blocked. Please check your internet connection and try again in a moment.');
+        return;
+    }
 
-            const rate = getExchangeRate();
-            const allClientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
+    const rate = getExchangeRate();
+    const allClientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
 
-            // Keep rides that still have an unpaid remaining balance > 0.01
-            const tabRides = allClientRides.filter(r => {
-                if (r.tabStatus === 'Paid') return false;
-                return getRideRemainingUSD(r) > 0.01;
-            });
+    // Keep rides that still have an unpaid remaining balance > 0.01
+    const tabRides = allClientRides.filter(r => {
+        if (r.tabStatus === 'Paid') return false;
+        return getRideRemainingUSD(r) > 0.01;
+    });
 
-            if (tabRides.length === 0) {
-                alert(`No unsettled rides found for ${clientName} to generate an invoice.`);
-                return;
-            }
+    if (tabRides.length === 0) {
+        alert(`No unsettled rides found for ${clientName} to generate an invoice.`);
+        return;
+    }
 
-            // --- BULLETPROOF DATE NORMALIZATION & CUTOFF LOGIC ---
-            const now = new Date();
-            const curYear = now.getFullYear();
-            const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+    let usdTotalDue = 0;
+    tabRides.forEach(r => {
+        usdTotalDue += getRideRemainingUSD(r);
+    });
 
-            // Threshold string: e.g., "2026-11-03" (Anything strictly BEFORE this goes to Balance Brought Forward)
-            const cutoffString = `${curYear}-${curMonth}-03`;
+    const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-            // Helper to normalize any date format (handles "01/11/2026" or ISO strings) into "YYYY-MM-DD"
-            function normalizeDateStr(dateInput) {
-                if (!dateInput) return '';
-                const str = String(dateInput).trim();
-                if (str.includes('/')) {
-                    const parts = str.split('/');
-                    if (parts.length === 3) {
-                        // Converts DD/MM/YYYY to YYYY-MM-DD
-                        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-                    }
-                }
-                return str.slice(0, 10);
-            }
-
-            const priorRides = tabRides.filter(r => {
-                const normDate = normalizeDateStr(r.date);
-                return normDate < cutoffString; // Captures Nov 1 and Nov 2 (and prior)
-            });
-
-            const currentPeriodRides = tabRides.filter(r => {
-                const normDate = normalizeDateStr(r.date);
-                return normDate >= cutoffString; // Captures Nov 3 onwards individually
-            });
-
-            // Calculate metrics for the single summary row
-            let priorOriginalUSD = 0;
-            let priorPaidUSD = 0;
-            let priorRemUSD = 0;
-
-            priorRides.forEach(r => {
-                const origUSD = parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1);
-                const rem = getRideRemainingUSD(r);
-                const paid = origUSD - rem;
-                priorOriginalUSD += origUSD;
-                priorPaidUSD += paid;
-                priorRemUSD += rem;
-            });
-            // ----------------------------------------------------
-
-            let usdTotalDue = 0;
-            tabRides.forEach(r => {
-                usdTotalDue += getRideRemainingUSD(r);
-            });
-
-            const todayDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-            // Build styled HTML template for the PDF
-            const element = document.createElement('div');
-            element.innerHTML = `
-                <div style="font-family: 'Inter', sans-serif; max-width: 800px; margin: auto; padding: 20px; color: #1e293b; background-color: #ffffff;">
-                    <!-- Header with Logo and Title -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 16px; margin-bottom: 24px;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <img src="https://oneminutetaxi.com/wp-content/uploads/2024/03/cropped-logo-01-2.png" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;" crossorigin="anonymous" alt="Logo">
-                            <div>
-                                <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
-                                <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Dispatch & Client Billing</p>
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <h2 style="font-size: 18px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Invoice</h2>
-                            <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">Date: ${todayDate}</p>
-                        </div>
-                    </div>
-
-                    <!-- Client Info Box -->
-                    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-                        <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 4px 0;">Billed To:</p>
-                        <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
-                        <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">${tabRides.length} Outstanding Unsettled Ride(s)</p>
-                    </div>
-
-                    <!-- Rides Table -->
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px;">
-                        <thead>
-                            <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 10px; font-weight: 700; text-align: left;">
-                                <th style="padding: 10px; border-bottom: 1px solid #cbd5e1;">Date</th>
-                                <th style="padding: 10px; border-bottom: 1px solid #cbd5e1;">Route Details</th>
-                                <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Original Cost</th>
-                                <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Paid / Credited</th>
-                                <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Balance Due</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Cumulative Balance Brought Forward Row (if prior rides exist) -->
-                            ${priorRides.length > 0 ? `
-                                <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f8fafc;">
-                                    <td style="padding: 10px; color: #64748b; vertical-align: top;">Prior</td>
-                                    <td style="padding: 10px; font-weight: 600; color: #1e293b; vertical-align: top;">
-                                        <div>Balance Brought Forward</div>
-                                        <div style="font-size: 10px; color: #64748b; font-style: italic; font-weight: normal; margin-top: 2px;">Includes ${priorRides.length} prior unsettled ride(s) before Nov 3</div>
-                                    </td>
-                                    <td style="padding: 10px; text-align: right; color: #475569; vertical-align: top;">$${priorOriginalUSD.toFixed(2)}</td>
-                                    <td style="padding: 10px; text-align: right; color: #16a34a; vertical-align: top;">${priorPaidUSD > 0.01 ? '-$' + priorPaidUSD.toFixed(2) : '$0.00'}</td>
-                                    <td style="padding: 10px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${priorRemUSD.toFixed(2)}</td>
-                                </tr>
-                            ` : ''}
-
-                            <!-- Individual Current Period Rides -->
-                            ${currentPeriodRides.map(r => {
-                                const originalCostUSD = parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1);
-                                const remUSD = getRideRemainingUSD(r);
-                                const paidUSD = originalCostUSD - remUSD;
-
-                                return `
-                                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                                        <td style="padding: 10px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
-                                        <td style="padding: 10px; font-weight: 600; color: #1e293b; vertical-align: top;">
-                                            <div>${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}</div>
-                                            ${r.note ? `<div style="font-size: 10px; color: #64748b; font-style: italic; font-weight: normal; margin-top: 2px;">Note: ${r.note}</div>` : ''}
-                                        </td>
-                                        <td style="padding: 10px; text-align: right; color: #475569; vertical-align: top;">$${originalCostUSD.toFixed(2)}</td>
-                                        <td style="padding: 10px; text-align: right; color: #16a34a; vertical-align: top;">${paidUSD > 0.01 ? '-$' + paidUSD.toFixed(2) : '$0.00'}</td>
-                                        <td style="padding: 10px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${remUSD.toFixed(2)}</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-
-                    <!-- Totals Section -->
-                    <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
-                        <div style="width: 300px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: #15803d;">
-                                <span>Total USD Balance Due:</span>
-                                <span>$${usdTotalDue.toFixed(2)}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Footer -->
-                    <div style="border-top: 1px solid #e2e8f0; paddingTop: 16px; text-align: center; font-size: 10px; color: #94a3b8;">
-                        <p style="margin: 0;">Thank you for choosing One Minute Taxi &bull; For inquiries, contact dispatch hub.</p>
+    // Build styled HTML template for the PDF
+    const element = document.createElement('div');
+    element.innerHTML = `
+        <div style="font-family: 'Inter', sans-serif; max-width: 800px; margin: auto; padding: 20px; color: #1e293b; background-color: #ffffff;">
+            <!-- Header with Logo and Title -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #22c55e; padding-bottom: 16px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="https://oneminutetaxi.com/wp-content/uploads/2024/03/cropped-logo-01-2.png" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover;" crossorigin="anonymous" alt="Logo">
+                    <div>
+                        <h1 style="font-size: 20px; font-weight: 700; color: #0f172a; margin: 0;">One Minute Taxi</h1>
+                        <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Dispatch & Client Billing</p>
                     </div>
                 </div>
-            `;
+                <div style="text-align: right;">
+                    <h2 style="font-size: 18px; font-weight: 700; color: #16a34a; margin: 0; text-transform: uppercase;">Invoice</h2>
+                    <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">Date: ${todayDate}</p>
+                </div>
+            </div>
 
-            const opt = {
-                margin:       0.3,
-                filename:     `Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
+            <!-- Client Info Box -->
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <p style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0 0 4px 0;">Billed To:</p>
+                <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin: 0;">${clientName}</h3>
+                <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">${tabRides.length} Outstanding Unsettled Ride(s)</p>
+            </div>
 
-            try {
-                await html2pdf().set(opt).from(element).save();
-            } catch (err) {
-                console.error('PDF Generation Error:', err);
-                alert('Could not generate PDF. Please check console for details.');
-            }
-        }
+            <!-- Rides Table -->
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 12px;">
+                <thead>
+                    <tr style="background-color: #f1f5f9; color: #475569; text-transform: uppercase; font-size: 10px; font-weight: 700; text-align: left;">
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1;">Date</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1;">Route Details</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Original Cost</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Paid / Credited</th>
+                        <th style="padding: 10px; border-bottom: 1px solid #cbd5e1; text-align: right;">Balance Due</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tabRides.map(r => {
+                        const originalCostUSD = parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1);
+                        const remUSD = getRideRemainingUSD(r);
+                        const paidUSD = originalCostUSD - remUSD;
+
+                        return `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 10px; color: #64748b; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
+                                <td style="padding: 10px; font-weight: 600; color: #1e293b; vertical-align: top;">
+                                    <div>${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}</div>
+                                    ${r.note ? `<div style="font-size: 10px; color: #64748b; font-style: italic; font-weight: normal; margin-top: 2px;">Note: ${r.note}</div>` : ''}
+                                </td>
+                                <td style="padding: 10px; text-align: right; color: #475569; vertical-align: top;">$${originalCostUSD.toFixed(2)}</td>
+                                <td style="padding: 10px; text-align: right; color: #16a34a; vertical-align: top;">${paidUSD > 0.01 ? '-$' + paidUSD.toFixed(2) : '$0.00'}</td>
+                                <td style="padding: 10px; text-align: right; font-weight: 700; color: #0f172a; vertical-align: top;">$${remUSD.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+
+            <!-- Totals Section -->
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 32px;">
+                <div style="width: 300px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: #15803d;">
+                        <span>Total USD Balance Due:</span>
+                        <span>$${usdTotalDue.toFixed(2)}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="border-top: 1px solid #e2e8f0; paddingTop: 16px; text-align: center; font-size: 10px; color: #94a3b8;">
+                <p style="margin: 0;">Thank you for choosing One Minute Taxi &bull; For inquiries, contact dispatch hub.</p>
+            </div>
+        </div>
+    `;
+
+    const opt = {
+        margin:       0.3,
+        filename:     `Invoice_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    try {
+        await html2pdf().set(opt).from(element).save();
+    } catch (err) {
+        console.error('PDF Generation Error:', err);
+        alert('Could not generate PDF. Please check console for details.');
+    }
+}
 
         // --- ADD RIDE DRIVER AUTOCOMPLETE ---
         function filterDriverDropdown(query) {
@@ -3356,7 +3294,7 @@
                                 <div class="flex items-center justify-between w-full sm:w-auto gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                                     <span class="font-extrabold text-base sm:text-lg text-slate-900">${currencySymbol}${amount.toLocaleString()}</span>
                                     <div class="flex gap-2">
-                                        <button onclick="generateSingleRideInvoice('${ride.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm flex items-center gap-1 transition-all">
+                                        <button onclick="generateSingleRideInvoice('${ride.id}')" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm flex items-center gap-1 transition-all">
                                             <i class="fa-brands fa-whatsapp text-sm"></i> Invoice
                                         </button>
                                         <button onclick="jumpToClientCard('${encodeURIComponent(clientName)}')" class="bg-slate-900 hover:bg-slate-800 text-white text-xs px-3 py-2 rounded-xl font-semibold shadow-sm transition-all">
