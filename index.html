@@ -3361,6 +3361,9 @@ async function downloadClientInvoicePDF(clientName) {
             // Switch to clients tab
             switchTab('tabs');
 
+            // Scroll smoothly to the top of the page instantly
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
             // Trigger drill-down view or search filter for this client
             setTimeout(() => {
                 if (typeof selectedClientDetail !== 'undefined') {
