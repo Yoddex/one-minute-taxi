@@ -3028,6 +3028,10 @@ async function downloadClientInvoicePDF(clientName) {
                                         <td style="padding: 8px; vertical-align: top;">${new Date(r.date).toLocaleDateString()}</td>
                                         <td style="padding: 8px; font-weight: 600; vertical-align: top; word-break: break-word;">
                                             ${r.from || 'Pickup'} &rarr; ${r.to || 'Destination'}
+
+                                            <!-- ADD THIS NOTE LINE BELOW -->
+                                            ${r.note ? `<span style="display: block; font-size: 8px; font-weight: 400; font-style: italic; color: #64748b; margin-top: 2px;">Note: ${r.note}</span>` : ''}
+
                                             <span style="display: block; font-size: 8px; font-weight: 700; margin-top: 2px; color: ${isPaid ? '#10b981' : (r.tabStatus === 'Partial' ? '#d97706' : '#64748b')}">
                                                 STATUS: ${isPaid ? 'PAID' : (r.tabStatus === 'Partial' ? 'PARTIAL RIDE' : 'PENDING')}
                                             </span>
