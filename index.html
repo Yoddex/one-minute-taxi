@@ -1142,9 +1142,9 @@
         // --- NAVIGATION CONTROLLER ---
         function switchTab(tabName) {
 
-            saveAppState();
-
             activeTab = tabName;
+            saveAppState();
+            
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabName}`).classList.remove('hidden');
 
@@ -3531,7 +3531,7 @@ async function downloadClientInvoicePDF(clientName) {
                 timeFilter.addEventListener('change', () => saveAppState());
             }
         });
-        
+
     </script>
 </body>
 </html>
