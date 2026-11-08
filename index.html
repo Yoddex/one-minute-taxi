@@ -2975,8 +2975,13 @@ async function downloadClientInvoicePDF(clientName) {
             element.style.boxSizing = 'border-box';
             element.style.fontFamily = 'Arial, sans-serif';
 
-            let usdTotalDue = 0;
-            allClientRides.forEach(r => { usdTotalDue += getRideRemainingUSD(r); });
+            let totalTabChargesUSD = 0;
+            allClientRides.forEach(r => { totalTabChargesUSD += parseFloat(r.amount || 0); });
+
+            let totalPaymentsUSD = 0;
+            clientPayments.forEach(p => { totalPaymentsUSD += parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0); });
+
+            let usdTotalDue = totalTabChargesUSD - totalPaymentsUSD;
 
             element.innerHTML = `
                 <div style="width: 100%; color: #1e293b; background-color: #ffffff;">
@@ -3059,8 +3064,8 @@ async function downloadClientInvoicePDF(clientName) {
                     </table>
 
                     <div style="display: flex; justify-content: flex-end;">
-                        <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: #15803d; font-size: 11px;">
-                            Total Due: $${usdTotalDue.toFixed(2)}
+                        <div style="background-color: ${usdTotalDue < 0 ? '#eff6ff' : '#f0fdf4'}; border: 1px solid ${usdTotalDue < 0 ? '#bfdbfe' : '#bbf7d0'}; border-radius: 8px; padding: 10px 14px; font-weight: 700; color: ${usdTotalDue < 0 ? '#1d4ed8' : '#15803d'}; font-size: 11px;">
+                            ${usdTotalDue < 0 ? `Credit Balance (Surplus): $${Math.abs(usdTotalDue).toFixed(2)}` : `Total Due: $${usdTotalDue.toFixed(2)}`}
                         </div>
                     </div>
                 </div>
