@@ -1061,6 +1061,9 @@
 
         // --- NAVIGATION CONTROLLER ---
         function switchTab(tabName) {
+
+            localStorage.setItem('omt_active_tab', tabName);
+
             activeTab = tabName;
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabName}`).classList.remove('hidden');
@@ -3435,6 +3438,12 @@ async function downloadClientInvoicePDF(clientName) {
         // --- APP INIT ---
         window.onload = function() {
             loadDataFromCloud();
+
+            const savedTab = localStorage.getItem('omt_active_tab');
+                        if (savedTab && document.getElementById(`tab-${savedTab}`)) {
+                            switchTab(savedTab);
+                        }
+
         };
     </script>
 </body>
