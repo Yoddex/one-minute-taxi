@@ -934,37 +934,6 @@
                     }
                 }
 
-                function restoreAppState() {
-                            const rawState = localStorage.getItem('omt_app_state');
-                            if (rawState) {
-                                try {
-                                    const state = JSON.parse(rawState);
-
-                                    if (state.clientSearch) {
-                                        const searchInput = document.getElementById('client-search-input');
-                                        if (searchInput) searchInput.value = state.clientSearch;
-                                    }
-                                    if (state.timeFilter) {
-                                        const timeFilter = document.getElementById('tab-time-filter');
-                                        if (timeFilter) timeFilter.value = state.timeFilter;
-                                    }
-                                    if (state.selectedClient && typeof selectedClientDetail !== 'undefined') {
-                                        selectedClientDetail = state.selectedClient;
-                                    }
-                                    if (state.activeTab && document.getElementById(`tab-${state.activeTab}`)) {
-                                        switchTab(state.activeTab);
-                                    } else {
-                                        switchTab('dashboard');
-                                    }
-                                } catch (err) {
-                                    console.error('Failed to restore state', err);
-                                    switchTab('dashboard');
-                                }
-                            } else {
-                                switchTab('dashboard');
-                            }
-                        }
-
                 // 2. Rate-Limit Aware Cloud Loader
                 async function loadDataFromCloud() {
                     let localCache = null;
@@ -985,10 +954,9 @@
                         }
                     }
 
-                    //switchTab('dashboard');
+                    switchTab('dashboard');
 
                     if (!GIST_TOKEN || GIST_TOKEN.trim() === '' || !navigator.onLine) {
-                        restoreAppState();
                         return;
                     }
 
@@ -1043,52 +1011,15 @@
                                         driverSettlements = remoteParsed.driverSettlements || [];
                                         clients = remoteParsed.clients || [];
                                         localStorage.setItem('oneminute_taxi_offline_data', JSON.stringify(remoteParsed));
-                                      //  switchTab('dashboard');
+                                        switchTab('dashboard');
                                     }
-                                  }
-                                              }
-                                          }
-                                      } catch (e) {
-                                          console.warn('Cloud load skipped:', e.message);
-                                      } finally {
-                                          // --- RESTORE PREVIOUS APP STATE & TAB ---
-                                          const rawState = localStorage.getItem('omt_app_state');
-                                          if (rawState) {
-                                              try {
-                                                  const state = JSON.parse(rawState);
-
-                                                  // 1. Restore search input value
-                                                  if (state.clientSearch) {
-                                                      const searchInput = document.getElementById('client-search-input');
-                                                      if (searchInput) searchInput.value = state.clientSearch;
-                                                  }
-
-                                                  // 2. Restore time filter value
-                                                  if (state.timeFilter) {
-                                                      const timeFilter = document.getElementById('tab-time-filter');
-                                                      if (timeFilter) timeFilter.value = state.timeFilter;
-                                                  }
-
-                                                  // 3. Restore selected client detail if tracked
-                                                  if (state.selectedClient && typeof selectedClientDetail !== 'undefined') {
-                                                      selectedClientDetail = state.selectedClient;
-                                                  }
-
-                                                  // 4. Switch back to the exact tab you were on
-                                                  if (state.activeTab && document.getElementById(`tab-${state.activeTab}`)) {
-                                                      switchTab(state.activeTab);
-                                                  } else {
-                                                      switchTab('dashboard');
-                                                  }
-                                              } catch (err) {
-                                                  console.error('Failed to restore state', err);
-                                                  switchTab('dashboard');
-                                              }
-                                          } else {
-                                              switchTab('dashboard');
-                                          }
-                                      }
-                                  }
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Cloud load skipped:', e.message);
+                    }
+                }
 
         // --- BACKUP & RESTORE FUNCTIONS ---
         function exportData() {
@@ -1128,23 +1059,9 @@
             reader.readAsText(file);
         }
 
-        // Save everything you are currently doing into localStorage
-        function saveAppState() {
-            const state = {
-                activeTab: typeof activeTab !== 'undefined' ? activeTab : 'dashboard',
-                clientSearch: document.getElementById('client-search-input')?.value || '',
-                timeFilter: document.getElementById('tab-time-filter')?.value || '',
-                selectedClient: typeof selectedClientDetail !== 'undefined' ? selectedClientDetail : null
-            };
-            localStorage.setItem('omt_app_state', JSON.stringify(state));
-        }
-
         // --- NAVIGATION CONTROLLER ---
         function switchTab(tabName) {
-
             activeTab = tabName;
-            saveAppState();
-            
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabName}`).classList.remove('hidden');
 
@@ -3519,19 +3436,6 @@ async function downloadClientInvoicePDF(clientName) {
         window.onload = function() {
             loadDataFromCloud();
         };
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const searchInput = document.getElementById('client-search-input');
-            if (searchInput) {
-                searchInput.addEventListener('input', () => saveAppState());
-            }
-
-            const timeFilter = document.getElementById('tab-time-filter');
-            if (timeFilter) {
-                timeFilter.addEventListener('change', () => saveAppState());
-            }
-        });
-
     </script>
 </body>
 </html>
