@@ -2805,7 +2805,7 @@ async function downloadClientInvoicePDF(clientName) {
                                 <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px; text-transform: uppercase;">Settlement Logic:</div>
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                                     <span>&bull; Split-Eligible (Cash+Whish+Tab):</span>
-                                    <span style="font-weight: 600;">$${(m.USD.cash + m.USD.whishInOwner + m.USD.tabUnpaid).toFixed(2)}</span>
+                                    <span style="font-weight: 600;">$${(m.USD.cash + m.USD.whishInOwner + m.USD.tabUnpaid + m.USD.tabPaid).toFixed(2)}</span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                                     <span>&bull; Driver Cut (90% of Split):</span>
