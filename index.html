@@ -1140,8 +1140,8 @@
                     cashInHand: totalCashInHand,
                     ToSamer: data.ToSamer,
                     whishInOwner: data.whish,
-                    tabUnpaid: data.tabUnpaid,
                     tabPaid: data.tabPaid,
+                    tabTotal: data.tabTotal || (data.tabUnpaid + data.tabPaid),
                     driverCut90: driverCut90,
                     officeCut10: officeCut10,
                     netSettlement: netSettlement
@@ -2796,8 +2796,8 @@ async function downloadClientInvoicePDF(clientName) {
                                     <span style="font-weight: 600;">USD $${m.USD.whishInOwner.toFixed(2)} | LBP ${Math.round(m.LBP.whishInOwner).toLocaleString()}</span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between;">
-                                    <span>&bull; On Tab (Unpaid):</span>
-                                    <span style="font-weight: 600;">USD $${m.USD.tabUnpaid.toFixed(2)} | LBP ${Math.round(m.LBP.tabUnpaid).toLocaleString()}</span>
+                                    <span>&bull; On Tab (Total):</span>
+                                    <span style="font-weight: 600;">USD $${m.USD.tabTotal.toFixed(2)} | LBP ${Math.round(m.LBP.tabTotal).toLocaleString()}</span>
                                 </div>
                             </div>
 
@@ -2806,7 +2806,7 @@ async function downloadClientInvoicePDF(clientName) {
                                 <div style="font-weight: 700; color: #0f172a; margin-bottom: 3px; text-transform: uppercase;">Settlement Logic:</div>
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                                     <span>&bull; Split-Eligible (Cash+Whish+Tab):</span>
-                                    <span style="font-weight: 600;">$${(m.USD.cash + m.USD.whishInOwner + m.USD.tabUnpaid + m.USD.tabPaid).toFixed(2)}</span>
+                                    <span style="font-weight: 600;">$${(m.USD.cash + m.USD.whishInOwner + m.USD.tabTotal).toFixed(2)}</span>
                                 </div>
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
                                     <span>&bull; Driver Cut (90% of Split):</span>
