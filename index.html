@@ -2397,6 +2397,10 @@ async function downloadClientInvoicePDF(clientName) {
                                 <span class="text-[11px] text-slate-400 block">Total Settled</span>
                                 <strong class="text-emerald-600 text-base">$${p.totalPaidUSD.toFixed(2)}</strong>
                             </div>
+                            <!-- Edit Payment Button -->
+                            <button onclick="openEditPaymentModal('${p.id}')" class="text-slate-400 hover:text-brand-600 p-2 transition-colors" title="Edit Payment Record">
+                                <i class="fa-solid fa-pen text-sm"></i>
+                            </button>
                             <button onclick="deleteClientPayment('${p.id}')" class="text-slate-400 hover:text-red-600 p-2 transition-colors" title="Delete Payment Record">
                                 <i class="fa-solid fa-trash-can text-sm"></i>
                             </button>
@@ -2414,6 +2418,48 @@ async function downloadClientInvoicePDF(clientName) {
                 `;
                 container.appendChild(card);
             });
+        }
+
+        function openEditPaymentModal(paymentId) {
+            // Find the payment record from localStorage or global payments array
+            let allPayments = [];
+            const possibleKeys = ['omt_payments', 'payments', 'client_payments', 'paymentHistory', 'omt_client_payments'];
+            for (const key of possibleKeys) {
+                try {
+                    const val = localStorage.getItem(key);
+                    if (val) {
+                        const parsed = JSON.parse(val);
+                        if (Array.isArray(parsed) && parsed.length > 0) { allPayments = parsed; break; }
+                    }
+                } catch (e) {}
+            }
+            if (allPayments.length === 0 && typeof payments !== 'undefined' && Array.isArray(payments)) {
+                allPayments = payments;
+            }
+
+            const payment = allPayments.find(p => p.id === paymentId);
+            if (!payment) {
+                alert('Payment record not found.');
+                return;
+            }
+
+            // Populate your payment modal input fields with the existing record's data
+            // (Adjust these element IDs to match whatever IDs your payment modal form uses)
+            const modalClientInput = document.getElementById('payment-client-input');
+            const modalAmountInput = document.getElementById('payment-amount-input');
+            const modalNoteInput = document.getElementById('payment-note-input');
+            const paymentIdHiddenInput = document.getElementById('editing-payment-id'); // Optional hidden field to track editing state
+
+            if (modalClientInput) modalClientInput.value = payment.clientName || payment.client || '';
+            if (modalAmountInput) modalAmountInput.value = payment.amountPaid || payment.totalPaidUSD || payment.amount || '';
+            if (modalNoteInput) modalNoteInput.value = payment.note || '';
+            if (paymentIdHiddenInput) paymentIdHiddenInput.value = payment.id;
+
+            // Open your payment modal using your existing modal function
+            // (e.g., openModal('payment-modal') or similar)
+            if (typeof openModal === 'function') {
+                openModal('payment-modal');
+            }
         }
 
         function deleteClientPayment(paymentId) {
