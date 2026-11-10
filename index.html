@@ -2421,46 +2421,50 @@ async function downloadClientInvoicePDF(clientName) {
         }
 
         function openEditPaymentModal(paymentId) {
-            // Find the payment record from localStorage or global payments array
-            let allPayments = [];
-            const possibleKeys = ['omt_payments', 'payments', 'client_payments', 'paymentHistory', 'omt_client_payments'];
-            for (const key of possibleKeys) {
-                try {
-                    const val = localStorage.getItem(key);
-                    if (val) {
-                        const parsed = JSON.parse(val);
-                        if (Array.isArray(parsed) && parsed.length > 0) { allPayments = parsed; break; }
+                    // 1. Find the payment record from the global payments array
+                    if (typeof payments === 'undefined' || !Array.isArray(payments)) {
+                        alert('Payments data not loaded.');
+                        return;
                     }
-                } catch (e) {}
-            }
-            if (allPayments.length === 0 && typeof payments !== 'undefined' && Array.isArray(payments)) {
-                allPayments = payments;
-            }
 
-            const payment = allPayments.find(p => p.id === paymentId);
-            if (!payment) {
-                alert('Payment record not found.');
-                return;
-            }
+                    const payment = payments.find(p => p.id === paymentId);
+                    if (!payment) {
+                        alert('Payment record not found.');
+                        return;
+                    }
 
-            // Populate your payment modal input fields with the existing record's data
-            // (Adjust these element IDs to match whatever IDs your payment modal form uses)
-            const modalClientInput = document.getElementById('payment-client-input');
-            const modalAmountInput = document.getElementById('payment-amount-input');
-            const modalNoteInput = document.getElementById('payment-note-input');
-            const paymentIdHiddenInput = document.getElementById('editing-payment-id'); // Optional hidden field to track editing state
+                    // 2. Open the payment modal using your existing functions
+                    if (typeof openPaymentModal === 'function') {
+                        openPaymentModal();
+                    } else if (typeof openNewPaymentModal === 'function') {
+                        openNewPaymentModal();
+                    }
 
-            if (modalClientInput) modalClientInput.value = payment.clientName || payment.client || '';
-            if (modalAmountInput) modalAmountInput.value = payment.amountPaid || payment.totalPaidUSD || payment.amount || '';
-            if (modalNoteInput) modalNoteInput.value = payment.note || '';
-            if (paymentIdHiddenInput) paymentIdHiddenInput.value = payment.id;
+                    // 3. Populate form fields after a brief timeout to ensure the modal elements are rendered
+                    setTimeout(() => {
+                        // Client select or input
+                        const clientSelect = document.getElementById('payment-client-select') || document.querySelector('select[name="client"]');
+                        if (clientSelect) {
+                            clientSelect.value = payment.clientName;
+                            clientSelect.dispatchEvent(new Event('change'));
+                        }
 
-            // Open your payment modal using your existing modal function
-            // (e.g., openModal('payment-modal') or similar)
-            if (typeof openModal === 'function') {
-                openModal('payment-modal');
-            }
-        }
+                        // Amount input (matches total paid USD or amount)
+                        const amountInput = document.getElementById('payment-amount-input') || document.getElementById('payment-amount') || document.querySelector('input[name="amount"]');
+                        if (amountInput) {
+                            amountInput.value = payment.totalPaidUSD || payment.amount || '';
+                        }
+
+                        // Note input
+                        const noteInput = document.getElementById('payment-note-input') || document.getElementById('payment-note') || document.querySelector('textarea[name="note"]');
+                        if (noteInput) {
+                            noteInput.value = payment.note || '';
+                        }
+
+                        // Store editing ID so your save function knows it's an edit instead of a new payment
+                        window.editingPaymentId = payment.id;
+                    }, 100);
+                }
 
         function deleteClientPayment(paymentId) {
             if (!confirm('Are you sure you want to delete this payment record? This will revert the settled rides back to "Pending / Unpaid".')) {
