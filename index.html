@@ -1349,6 +1349,12 @@
                                     <i class="fa-solid fa-hand-holding-dollar mr-1"></i> Settle
                                 </button>
                             </div>
+
+                            // Inside your driver rendering loop:
+                            <button onclick="openEditDriverModal('${driver.id}')" class="text-slate-400 hover:text-brand-600 p-2 transition-colors" title="Edit Driver Name">
+                                <i class="fa-solid fa-pen text-sm"></i>
+                            </button>
+
                             <button onclick="promptDeleteDriver('${driver.id}', '${driver.name}')" class="text-xs text-red-500 hover:text-red-700 p-2.5 rounded-xl border border-red-200 hover:bg-red-50 transition-all flex items-center justify-center ml-auto sm:ml-0" title="Delete Driver">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
@@ -2652,6 +2658,8 @@ async function downloadClientInvoicePDF(clientName) {
         }
 
         function openAddDriverModal() {
+            driverBeingEditedId = null; // Clears any edit memory so it creates a new driver
+            document.getElementById('add-driver-form').reset(); // Clears the form inputs too
             document.getElementById('add-driver-modal').classList.remove('hidden');
         }
 
@@ -2660,17 +2668,61 @@ async function downloadClientInvoicePDF(clientName) {
             const name = document.getElementById('modal-driver-name').value;
             const phone = document.getElementById('modal-driver-phone').value;
 
-            const newDriver = {
-                id: 'd_' + Date.now(),
-                name,
-                phone: phone || ''
-            };
+            if (driverBeingEditedId) {
+                // UPDATE EXISTING DRIVER
+                drivers = drivers.map(d => {
+                    if (d.id === driverBeingEditedId) {
+                        d.name = name;
+                        d.phone = phone || '';
+                    }
+                    return d;
+                });
+                driverBeingEditedId = null; // Reset edit state after updating
+            } else {
+                // CREATE NEW DRIVER
+                const newDriver = {
+                    id: 'd_' + Date.now(),
+                    name,
+                    phone: phone || ''
+                };
+                drivers.push(newDriver);
+            }
 
-            drivers.push(newDriver);
             saveData();
             closeModal('add-driver-modal');
             document.getElementById('add-driver-form').reset();
             switchTab(activeTab);
+        }
+
+        let driverBeingEditedId = null;
+
+        function openEditDriverModal(driverId) {
+            if (typeof drivers === 'undefined' || !Array.isArray(drivers)) return;
+
+            const driver = drivers.find(d => d.id === driverId);
+            if (!driver) {
+                alert('Driver not found.');
+                return;
+            }
+
+            driverBeingEditedId = driver.id;
+
+            // Open the driver modal using your app's existing modal function
+            if (typeof openModal === 'function') {
+                openModal('add-driver-modal');
+            } else {
+                const modal = document.getElementById('add-driver-modal');
+                if (modal) modal.classList.remove('hidden');
+            }
+
+            // Pre-fill the input fields with current driver data using your exact modal IDs
+            setTimeout(() => {
+                const nameInput = document.getElementById('modal-driver-name');
+                if (nameInput) nameInput.value = driver.name || '';
+
+                const phoneInput = document.getElementById('modal-driver-phone');
+                if (phoneInput) phoneInput.value = driver.phone || '';
+            }, 100);
         }
 
         function promptDeleteDriver(driverId, name) {
