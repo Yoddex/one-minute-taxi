@@ -1606,13 +1606,14 @@
                         totalChargesUSD += parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1);
                     });
 
+                    // Get all payments made by this client
                     const clientPayments = allPayments.filter(p => (p.clientName || p.client || '').trim().toLowerCase() === c.client.toLowerCase());
                     let totalPaymentsUSD = 0;
                     clientPayments.forEach(p => {
                         totalPaymentsUSD += parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0);
                     });
 
-                    // Negative value means surplus/credit
+                    // Total charges ($8) minus total payments ($10) = -$2.00 surplus!
                     c.USD = totalChargesUSD - totalPaymentsUSD;
                 });
 
