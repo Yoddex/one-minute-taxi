@@ -1598,6 +1598,11 @@
                     } catch (e) {}
                 }
 
+                // Fallback to global payments array in memory if localStorage didn't catch it
+                if (allPayments.length === 0 && typeof payments !== 'undefined' && Array.isArray(payments)) {
+                    allPayments = payments;
+                }
+
                 Object.values(clientsMap).forEach(c => {
                     c.rides.sort((a, b) => new Date(a.date) - new Date(b.date));
 
