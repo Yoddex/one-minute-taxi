@@ -2397,10 +2397,6 @@ async function downloadClientInvoicePDF(clientName) {
                                 <span class="text-[11px] text-slate-400 block">Total Settled</span>
                                 <strong class="text-emerald-600 text-base">$${p.totalPaidUSD.toFixed(2)}</strong>
                             </div>
-                            <!-- Edit Payment Button -->
-                            <button onclick="openEditPaymentModal('${p.id}')" class="text-slate-400 hover:text-brand-600 p-2 transition-colors" title="Edit Payment Record">
-                                <i class="fa-solid fa-pen text-sm"></i>
-                            </button>
                             <button onclick="deleteClientPayment('${p.id}')" class="text-slate-400 hover:text-red-600 p-2 transition-colors" title="Delete Payment Record">
                                 <i class="fa-solid fa-trash-can text-sm"></i>
                             </button>
@@ -2419,52 +2415,6 @@ async function downloadClientInvoicePDF(clientName) {
                 container.appendChild(card);
             });
         }
-
-        function openEditPaymentModal(paymentId) {
-                    // 1. Find the payment record from the global payments array
-                    if (typeof payments === 'undefined' || !Array.isArray(payments)) {
-                        alert('Payments data not loaded.');
-                        return;
-                    }
-
-                    const payment = payments.find(p => p.id === paymentId);
-                    if (!payment) {
-                        alert('Payment record not found.');
-                        return;
-                    }
-
-                    // 2. Open the payment modal using your existing functions
-                    if (typeof openPaymentModal === 'function') {
-                        openPaymentModal();
-                    } else if (typeof openNewPaymentModal === 'function') {
-                        openNewPaymentModal();
-                    }
-
-                    // 3. Populate form fields after a brief timeout to ensure the modal elements are rendered
-                    setTimeout(() => {
-                        // Client select or input
-                        const clientSelect = document.getElementById('payment-client-select') || document.querySelector('select[name="client"]');
-                        if (clientSelect) {
-                            clientSelect.value = payment.clientName;
-                            clientSelect.dispatchEvent(new Event('change'));
-                        }
-
-                        // Amount input (matches total paid USD or amount)
-                        const amountInput = document.getElementById('payment-amount-input') || document.getElementById('payment-amount') || document.querySelector('input[name="amount"]');
-                        if (amountInput) {
-                            amountInput.value = payment.totalPaidUSD || payment.amount || '';
-                        }
-
-                        // Note input
-                        const noteInput = document.getElementById('payment-note-input') || document.getElementById('payment-note') || document.querySelector('textarea[name="note"]');
-                        if (noteInput) {
-                            noteInput.value = payment.note || '';
-                        }
-
-                        // Store editing ID so your save function knows it's an edit instead of a new payment
-                        window.editingPaymentId = payment.id;
-                    }, 100);
-                }
 
         function deleteClientPayment(paymentId) {
             if (!confirm('Are you sure you want to delete this payment record? This will revert the settled rides back to "Pending / Unpaid".')) {
