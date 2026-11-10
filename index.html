@@ -2694,7 +2694,44 @@ async function downloadClientInvoicePDF(clientName) {
             if (!confirm('Are you sure you want to delete this ride? This action cannot be undone.')) {
                 return;
             }
+
+            // 1. Remove the ride from the global rides array
             rides = rides.filter(r => r.id !== rideId);
+
+            // 2. Scrub this ride ID from any payment allocation lists to prevent phantom records
+            const possibleKeys = ['omt_payments', 'payments', 'client_payments', 'paymentHistory', 'omt_client_payments'];
+            for (const key of possibleKeys) {
+                try {
+                    const val = localStorage.getItem(key);
+                    if (val) {
+                        let paymentsArr = JSON.parse(val);
+                        if (Array.isArray(paymentsArr) && paymentsArr.length > 0) {
+                            let modified = false;
+                            paymentsArr = paymentsArr.map(p => {
+                                if (p.allocations && Array.isArray(p.allocations) && p.allocations.includes(rideId)) {
+                                    p.allocations = p.allocations.filter(id => id !== rideId);
+                                    modified = true;
+                                }
+                                return p;
+                            });
+                            if (modified) {
+                                localStorage.setItem(key, JSON.stringify(paymentsArr));
+                            }
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            // Also check global payments array in memory if it exists
+            if (typeof payments !== 'undefined' && Array.isArray(payments)) {
+                payments.forEach(p => {
+                    if (p.allocations && Array.isArray(p.allocations)) {
+                        p.allocations = p.allocations.filter(id => id !== rideId);
+                    }
+                });
+            }
+
+            // 3. Save state and re-render
             saveData();
             switchTab(activeTab);
         }
