@@ -2192,7 +2192,26 @@ async function downloadClientInvoicePDF(clientName) {
             }
 
             const unpaidBalances = getClientUnpaidBalances();
-            const balanceUSD = unpaidBalances[clientName] || 0;
+            let balanceUSD = unpaidBalances[clientName] || 0;
+
+            if (balanceUSD <= 0.01) {
+                const rateInput = document.getElementById('payment-exchange-rate') || document.getElementById('exchange-rate-input');
+                const rate = parseFloat(rateInput ? rateInput.value : 90000) || 90000;
+                const allRidesList = (typeof rides !== 'undefined' && Array.isArray(rides)) ? rides : [];
+                const allPaymentsList = (typeof payments !== 'undefined' && Array.isArray(payments)) ? payments : [];
+
+                const chargesUSD = allRidesList
+                    .filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase())
+                    .reduce((sum, r) => sum + (parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1)), 0);
+
+                const paidUSD = allPaymentsList
+                    .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase())
+                    .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
+
+                const net = chargesUSD - paidUSD;
+                if (net > 0.01) balanceUSD = net;
+            }
+
             summaryElem.innerHTML = `<span class="text-amber-600 font-bold">Total Unpaid Balance: $${balanceUSD.toFixed(2)}</span>`;
         }
 
