@@ -2634,19 +2634,24 @@ async function downloadClientInvoicePDF(clientName) {
             // Check if the client has available overpayment credit to auto-pay this new ride
             let initialTabStatus = type === 'On Tab' ? 'Unpaid' : '';
             if (type === 'On Tab' && client) {
-                let totalOverpaidUSD = 0;
                 const rate = getExchangeRate();
-                if (typeof payments !== 'undefined' && payments) {
-                    payments.filter(p => p.clientName.toLowerCase() === client.toLowerCase()).forEach(p => {
-                        let settledCostUSD = 0;
-                        if (p.ridesSummary) {
-                            settledCostUSD = p.ridesSummary.reduce((sum, rs) => sum + (rs.currency === 'LBP' ? rs.amount / rate : rs.amount), 0);
-                        }
-                        if (p.totalPaidUSD > settledCostUSD) {
-                            totalOverpaidUSD += (p.totalPaidUSD - settledCostUSD);
-                        }
-                    });
+                const allChargesUSD = rides
+                    .filter(r => r.type === 'On Tab' && r.client && r.client.toLowerCase() === client.toLowerCase())
+                    .reduce((sum, r) => sum + (r.currency === 'LBP' ? parseFloat(r.amount) / rate : parseFloat(r.amount)), 0);
+
+                const allPaidUSD = (typeof payments !== 'undefined' && payments)
+                    ? payments
+                        .filter(p => p.clientName && p.clientName.toLowerCase() === client.toLowerCase())
+                        .reduce((sum, p) => sum + parseFloat(p.totalPaidUSD || p.amountPaid || 0), 0)
+                    : 0;
+
+                const availableCredit = allPaidUSD - allChargesUSD;
+                const newRideCostUSD = currency === 'LBP' ? parseFloat(amount) / rate : parseFloat(amount);
+
+                if (availableCredit >= newRideCostUSD) {
+                    initialTabStatus = 'Paid';
                 }
+            }
 
                 // Deduct any existing unpaid rides already using up that credit
                 const clientUnpaidRides = rides.filter(r => r.type === 'On Tab' && r.client && r.client.toLowerCase() === client.toLowerCase() && r.tabStatus !== 'Paid');
