@@ -1776,8 +1776,8 @@
                         ${c.phone ? `<p class="text-xs text-slate-600 font-medium">Phone: ${c.phone}</p>` : ''}
                         <p class="text-xs text-slate-500">${c.rides.length} Total Rides &bull; ${pendingRides.length} Unsettled</p>
                     </div>
-                    <span class="px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${pendingCount > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
-                        ${pendingCount > 0 ? `${pendingCount} Pending` : 'All Settled'}
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold shrink-0 ${(pendingCount > 0 || c.USD > 0.01) ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                        ${pendingCount > 0 ? `${pendingCount} Pending` : (c.USD > 0.01 ? 'Balance Due' : 'All Settled')}
                     </span>
                 </div>
 
@@ -2148,9 +2148,27 @@ async function downloadClientInvoicePDF(clientName) {
             const currentRate = globalRateInput ? (globalRateInput.value || '90000') : '90000';
             document.getElementById('payment-exchange-rate').value = currentRate;
 
-            // Populate dropdown with ONLY clients who have active/unpaid rides
+            // Populate dropdown with clients who have unpaid rides OR a positive net balance
             const unpaidBalances = getClientUnpaidBalances();
-            const clientsWithTabs = Object.keys(unpaidBalances).filter(name => unpaidBalances[name] > 0).sort();
+            const rate = parseFloat(currentRate) || 90000;
+            const allPaymentsList = (typeof payments !== 'undefined' && Array.isArray(payments)) ? payments : [];
+            const allRidesList = (typeof rides !== 'undefined' && Array.isArray(rides)) ? rides : [];
+
+            allRidesList.filter(r => r.type === 'On Tab' && r.client).forEach(r => {
+                const name = r.client.trim();
+                const chargesUSD = allRidesList
+                    .filter(x => x.type === 'On Tab' && (x.client || '').trim().toLowerCase() === name.toLowerCase())
+                    .reduce((sum, x) => sum + (parseFloat(x.amount || 0) / (x.currency === 'LBP' ? rate : 1)), 0);
+                const paidUSD = allPaymentsList
+                    .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === name.toLowerCase())
+                    .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
+                const netBalance = chargesUSD - paidUSD;
+                if (netBalance > 0.01 && (!unpaidBalances[name] || unpaidBalances[name] <= 0)) {
+                    unpaidBalances[name] = netBalance;
+                }
+            });
+
+            const clientsWithTabs = Object.keys(unpaidBalances).filter(name => unpaidBalances[name] > 0.01).sort();
 
             clientsWithTabs.forEach(name => {
                 const opt = document.createElement('option');
