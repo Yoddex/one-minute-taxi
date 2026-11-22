@@ -2149,24 +2149,29 @@ async function downloadClientInvoicePDF(clientName) {
         function getClientUnpaidBalances() {
             const map = {};
             const rate = getExchangeRate();
+            const allRidesList = (typeof rides !== 'undefined' && Array.isArray(rides)) ? rides : [];
+            const allPaymentsList = (typeof payments !== 'undefined' && Array.isArray(payments)) ? payments : [];
 
-            // Find all unique On Tab clients
-            const clientNames = [...new Set(rides.filter(r => r.type === 'On Tab' && r.client).map(r => r.client.trim()))];
+            const clientNames = [...new Set(
+                allRidesList
+                    .filter(r => r.type === 'On Tab' && r.client)
+                    .map(r => r.client.trim())
+            )];
 
             clientNames.forEach(clientName => {
-                const clientRides = rides.filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.toLowerCase());
-                clientRides.sort((a, b) => new Date(a.date) - new Date(b.date));
+                const key = clientName.toLowerCase();
 
-                let totalUnpaidUSD = 0;
-                clientRides.forEach(r => {
-                    const rem = getRideRemainingUSD(r);
-                    if (r.tabStatus !== 'Paid' && rem > 0.01) {
-                        totalUnpaidUSD += rem;
-                    }
-                });
+                const chargesUSD = allRidesList
+                    .filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === key)
+                    .reduce((sum, r) => sum + (parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1)), 0);
 
-                if (totalUnpaidUSD > 0.01) {
-                    map[clientName] = totalUnpaidUSD;
+                const paidUSD = allPaymentsList
+                    .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === key)
+                    .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
+
+                const netBalance = chargesUSD - paidUSD;
+                if (netBalance > 0.01) {
+                    map[clientName] = netBalance;
                 }
             });
 
@@ -2226,26 +2231,7 @@ async function downloadClientInvoicePDF(clientName) {
             }
 
             const unpaidBalances = getClientUnpaidBalances();
-            let balanceUSD = unpaidBalances[clientName] || 0;
-
-            if (balanceUSD <= 0.01) {
-                const rateInput = document.getElementById('payment-exchange-rate') || document.getElementById('exchange-rate-input');
-                const rate = parseFloat(rateInput ? rateInput.value : 90000) || 90000;
-                const allRidesList = (typeof rides !== 'undefined' && Array.isArray(rides)) ? rides : [];
-                const allPaymentsList = (typeof payments !== 'undefined' && Array.isArray(payments)) ? payments : [];
-
-                const chargesUSD = allRidesList
-                    .filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase())
-                    .reduce((sum, r) => sum + (parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1)), 0);
-
-                const paidUSD = allPaymentsList
-                    .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase())
-                    .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
-
-                const net = chargesUSD - paidUSD;
-                if (net > 0.01) balanceUSD = net;
-            }
-
+            const balanceUSD = unpaidBalances[clientName] || 0;
             summaryElem.innerHTML = `<span class="text-amber-600 font-bold">Total Unpaid Balance: $${balanceUSD.toFixed(2)}</span>`;
         }
 
