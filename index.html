@@ -1193,6 +1193,46 @@
                         }
                     });
 
+                    const dashRate = getExchangeRate();
+                                        const dashLedger = {};
+
+                                        rides.filter(r => r.type === 'On Tab' && r.client).forEach(r => {
+                                            const key = r.client.trim().toLowerCase();
+                                            if (!dashLedger[key]) dashLedger[key] = { chargesUSD: 0, paidUSD: 0, chargesLBP: 0, paidLBP: 0 };
+                                            const amt = parseFloat(r.amount || 0);
+                                            if (r.currency === 'LBP') {
+                                                dashLedger[key].chargesLBP += amt;
+                                                dashLedger[key].chargesUSD += amt / dashRate;
+                                            } else {
+                                                dashLedger[key].chargesUSD += amt;
+                                                dashLedger[key].chargesLBP += amt * dashRate;
+                                            }
+                                        });
+
+                                        (payments || []).forEach(p => {
+                                            const name = p.clientName || p.client;
+                                            if (!name) return;
+                                            const key = name.trim().toLowerCase();
+                                            if (!dashLedger[key]) dashLedger[key] = { chargesUSD: 0, paidUSD: 0, chargesLBP: 0, paidLBP: 0 };
+                                            const paid = parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0);
+                                            if (p.currency === 'LBP') {
+                                                dashLedger[key].paidLBP += paid;
+                                                dashLedger[key].paidUSD += paid / dashRate;
+                                            } else {
+                                                dashLedger[key].paidUSD += paid;
+                                                dashLedger[key].paidLBP += paid * dashRate;
+                                            }
+                                        });
+
+                                        totalTabsDueUSD = 0;
+                                        totalTabsDueLBP = 0;
+                                        Object.values(dashLedger).forEach(entry => {
+                                            const netUSD = entry.chargesUSD - entry.paidUSD;
+                                            const netLBP = entry.chargesLBP - entry.paidLBP;
+                                            if (netUSD > 0.01) totalTabsDueUSD += netUSD;
+                                            if (netLBP > 1) totalTabsDueLBP += netLBP;
+                                        });
+
                     // Update Total Client Tabs Due Dashboard Elements
                     document.getElementById('dash-total-tabs-due-usd').innerText = `$${totalTabsDueUSD.toFixed(2)}`;
                     document.getElementById('dash-total-tabs-due-lbp').innerText = `LBP ${Math.round(totalTabsDueLBP).toLocaleString()}`;
@@ -1815,9 +1855,7 @@
                                             ${r.note ? `<div class="text-[11px] text-slate-500 italic mt-0.5"><i class="fa-regular fa-note-sticky mr-1 text-slate-400"></i>${r.note}</div>` : ''}
                                         </td>
                                         <td class="p-3">
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${r.tabStatus === 'Paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                                                ${r.tabStatus === 'Paid' ? 'PAID' : 'PENDING'}
-                                            </span>
+                                            ${getRideStatusBadge(r)}
                                         </td>
                                         <td class="p-3 text-right font-bold text-slate-900">${r.currency === 'USD' ? '$' : 'LBP '}${parseFloat(r.amount).toLocaleString()}</td>
                                     </tr>
@@ -2305,6 +2343,26 @@ async function downloadClientInvoicePDF(clientName) {
             if (!payments) payments = [];
             payments.push(newPayment);
 
+            const rateNow = getExchangeRate();
+                        const clientTotalPaidUSD = payments
+                            .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === clientName.trim().toLowerCase())
+                            .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
+
+                        let creditPool = clientTotalPaidUSD;
+                        rides
+                            .filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase())
+                            .sort((a, b) => new Date(a.date) - new Date(b.date))
+                            .forEach(r => {
+                                const costUSD = r.currency === 'LBP' ? parseFloat(r.amount || 0) / rateNow : parseFloat(r.amount || 0);
+                                if (creditPool >= costUSD - 0.01) {
+                                    r.tabStatus = 'Paid';
+                                    creditPool -= costUSD;
+                                } else {
+                                    r.tabStatus = 'Unpaid';
+                                    creditPool = 0;
+                                }
+                            });
+
             saveData();
             closeModal('modal-new-payment');
             renderClientTabs();
@@ -2461,18 +2519,32 @@ async function downloadClientInvoicePDF(clientName) {
             const payment = payments.find(p => p.id === paymentId);
             if (!payment) return;
 
-            // Revert associated rides back to 'Unpaid'
-            if (payment.rideIds && Array.isArray(payment.rideIds)) {
-                payment.rideIds.forEach(rId => {
-                    const ride = rides.find(r => r.id === rId);
-                    if (ride) {
-                        ride.tabStatus = 'Unpaid';
-                    }
-                });
-            }
+            const clientKey = (payment.clientName || payment.client || '').trim().toLowerCase();
 
             // Remove payment record from array
             payments = payments.filter(p => p.id !== paymentId);
+
+            // Recalculate 'Paid' vs 'Unpaid' across this client's rides from remaining payments
+            if (clientKey) {
+                const rateNow = getExchangeRate();
+                let creditPool = payments
+                    .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === clientKey)
+                    .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
+
+                rides
+                    .filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === clientKey)
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))
+                    .forEach(r => {
+                        const costUSD = r.currency === 'LBP' ? parseFloat(r.amount || 0) / rateNow : parseFloat(r.amount || 0);
+                        if (creditPool >= costUSD - 0.01) {
+                            r.tabStatus = 'Paid';
+                            creditPool -= costUSD;
+                        } else {
+                            r.tabStatus = 'Unpaid';
+                            creditPool = 0;
+                        }
+                    });
+            }
 
             saveData();
             renderClientTabs();
