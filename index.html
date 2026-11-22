@@ -2631,33 +2631,24 @@ async function downloadClientInvoicePDF(clientName) {
             // Default date to yesterday (subtracting 24 hours in milliseconds)
             const yesterdayDate = new Date(Date.now() - 86400000).toISOString();
 
-            // Check if the client has available overpayment credit to auto-pay this new ride
+            // Check if the client has true net credit (Total Paid - Total Rides) to auto-pay this new ride
             let initialTabStatus = type === 'On Tab' ? 'Unpaid' : '';
             if (type === 'On Tab' && client) {
-                let totalOverpaidUSD = 0;
                 const rate = getExchangeRate();
-                if (typeof payments !== 'undefined' && payments) {
-                    payments.filter(p => p.clientName.toLowerCase() === client.toLowerCase()).forEach(p => {
-                        let settledCostUSD = 0;
-                        if (p.ridesSummary) {
-                            settledCostUSD = p.ridesSummary.reduce((sum, rs) => sum + (rs.currency === 'LBP' ? rs.amount / rate : rs.amount), 0);
-                        }
-                        if (p.totalPaidUSD > settledCostUSD) {
-                            totalOverpaidUSD += (p.totalPaidUSD - settledCostUSD);
-                        }
-                    });
-                }
+                const allPaymentsList = (typeof payments !== 'undefined' && Array.isArray(payments)) ? payments : [];
+                const totalPaidUSD = allPaymentsList
+                    .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === client.toLowerCase())
+                    .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
 
-                // Deduct any existing unpaid rides already using up that credit
-                const clientUnpaidRides = rides.filter(r => r.type === 'On Tab' && r.client && r.client.toLowerCase() === client.toLowerCase() && r.tabStatus !== 'Paid');
-                const unpaidDebtUSD = clientUnpaidRides.reduce((sum, r) => sum + (r.currency === 'LBP' ? parseFloat(r.amount) / rate : parseFloat(r.amount)), 0);
+                const totalRidesUSD = rides
+                    .filter(r => r.type === 'On Tab' && r.client && r.client.trim().toLowerCase() === client.toLowerCase())
+                    .reduce((sum, r) => sum + (r.currency === 'LBP' ? parseFloat(r.amount || 0) / rate : parseFloat(r.amount || 0)), 0);
 
-                let availableCredit = totalOverpaidUSD - unpaidDebtUSD;
-                let newRideCostUSD = parseFloat(amount);
-                if (currency === 'LBP') newRideCostUSD = newRideCostUSD / rate;
+                const availableCredit = totalPaidUSD - totalRidesUSD;
+                const newRideCostUSD = currency === 'LBP' ? parseFloat(amount) / rate : parseFloat(amount);
 
-                if (availableCredit >= newRideCostUSD) {
-                    initialTabStatus = 'Paid'; // Automatically covered by client credit!
+                if (availableCredit >= newRideCostUSD - 0.01) {
+                    initialTabStatus = 'Paid'; // Automatically covered by true client credit
                 }
             }
 
