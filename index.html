@@ -1193,45 +1193,41 @@
                         }
                     });
 
-                    const dashRate = getExchangeRate();
-                                        const dashLedger = {};
+                    const dashLedger = {};
 
-                                        rides.filter(r => r.type === 'On Tab' && r.client).forEach(r => {
-                                            const key = r.client.trim().toLowerCase();
-                                            if (!dashLedger[key]) dashLedger[key] = { chargesUSD: 0, paidUSD: 0, chargesLBP: 0, paidLBP: 0 };
-                                            const amt = parseFloat(r.amount || 0);
-                                            if (r.currency === 'LBP') {
-                                                dashLedger[key].chargesLBP += amt;
-                                                dashLedger[key].chargesUSD += amt / dashRate;
-                                            } else {
-                                                dashLedger[key].chargesUSD += amt;
-                                                dashLedger[key].chargesLBP += amt * dashRate;
-                                            }
-                                        });
+                    rides.filter(r => r.type === 'On Tab' && r.client).forEach(r => {
+                        const key = r.client.trim().toLowerCase();
+                        if (!dashLedger[key]) dashLedger[key] = { chargesUSD: 0, paidUSD: 0, chargesLBP: 0, paidLBP: 0 };
+                        const amt = parseFloat(r.amount || 0);
+                        if (r.currency === 'LBP') {
+                            dashLedger[key].chargesLBP += amt;
+                        } else {
+                            dashLedger[key].chargesUSD += amt;
+                        }
+                    });
 
-                                        (payments || []).forEach(p => {
-                                            const name = p.clientName || p.client;
-                                            if (!name) return;
-                                            const key = name.trim().toLowerCase();
-                                            if (!dashLedger[key]) dashLedger[key] = { chargesUSD: 0, paidUSD: 0, chargesLBP: 0, paidLBP: 0 };
-                                            const paid = parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0);
-                                            if (p.currency === 'LBP') {
-                                                dashLedger[key].paidLBP += paid;
-                                                dashLedger[key].paidUSD += paid / dashRate;
-                                            } else {
-                                                dashLedger[key].paidUSD += paid;
-                                                dashLedger[key].paidLBP += paid * dashRate;
-                                            }
-                                        });
+                    (payments || []).forEach(p => {
+                        const name = p.clientName || p.client;
+                        if (!name) return;
+                        const key = name.trim().toLowerCase();
+                        if (!dashLedger[key]) dashLedger[key] = { chargesUSD: 0, paidUSD: 0, chargesLBP: 0, paidLBP: 0 };
+                        const paid = parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0);
+                        const pCurr = p.currency || 'USD';
+                        if (pCurr === 'LBP') {
+                            dashLedger[key].paidLBP += paid;
+                        } else {
+                            dashLedger[key].paidUSD += paid;
+                        }
+                    });
 
-                                        totalTabsDueUSD = 0;
-                                        totalTabsDueLBP = 0;
-                                        Object.values(dashLedger).forEach(entry => {
-                                            const netUSD = entry.chargesUSD - entry.paidUSD;
-                                            const netLBP = entry.chargesLBP - entry.paidLBP;
-                                            if (netUSD > 0.01) totalTabsDueUSD += netUSD;
-                                            if (netLBP > 1) totalTabsDueLBP += netLBP;
-                                        });
+                    totalTabsDueUSD = 0;
+                    totalTabsDueLBP = 0;
+                    Object.values(dashLedger).forEach(entry => {
+                        const netUSD = entry.chargesUSD - entry.paidUSD;
+                        const netLBP = entry.chargesLBP - entry.paidLBP;
+                        if (netUSD > 0.01) totalTabsDueUSD += netUSD;
+                        if (netLBP > 1) totalTabsDueLBP += netLBP;
+                    });
 
                     // Update Total Client Tabs Due Dashboard Elements
                     document.getElementById('dash-total-tabs-due-usd').innerText = `$${totalTabsDueUSD.toFixed(2)}`;
