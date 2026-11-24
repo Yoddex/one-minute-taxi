@@ -1245,13 +1245,11 @@
                         totalLBP.tab += m.LBP.tabUnpaid;
                     });
 
-                    console.log('DASHBOARD DEBUG:', { ridesLen: rides.length, driversLen: drivers.length, sample: rides[0] });
                     const splitGrossUSD = rides
                         .filter(r => {
-                            const isSettled = r.driverSettled === true;
                             const cur = (r.currency || 'USD').toUpperCase();
                             const type = (r.type || '').trim();
-                            return !isSettled && cur === 'USD' && (type === 'Cash' || type === 'Whish' || type === 'On Tab');
+                            return cur === 'USD' && (type === 'Cash' || type === 'Whish' || type === 'On Tab');
                         })
                         .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
