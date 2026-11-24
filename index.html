@@ -121,7 +121,7 @@
               </div>
 
               <!-- Total LBP Tabs Due -->
-              <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
+              <div class="hidden bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
                   <div class="flex justify-between items-start">
                       <div>
                           <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Total LBP Owed From Tabs</p>
@@ -140,24 +140,24 @@
             <!-- Summary Metric Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <!-- USD Total Gross Revenue -->
-                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+                <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-5 rounded-2xl shadow-sm relative overflow-hidden">
                     <div class="flex justify-between items-start">
                         <div>
-                            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Gross (USD)</p>
-                            <h3 class="text-2xl font-bold text-slate-900 mt-1" id="dash-gross-usd">$0.00</h3>
+                            <p class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Total Gross (USD)</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="dash-gross-usd">$0.00</h3>
                         </div>
-                        <div class="p-2.5 rounded-xl bg-emerald-50 text-emerald-600">
+                        <div class="p-2.5 rounded-xl bg-white/10 text-emerald-400">
                             <i class="fa-solid fa-dollar-sign text-lg"></i>
                         </div>
                     </div>
-                    <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
-                        <span>Office 10%: <strong class="text-slate-700" id="dash-office-usd">$0.00</strong></span>
-                        <span>Drivers 90%: <strong class="text-slate-700" id="dash-drivers-cut-usd">$0.00</strong></span>
+                    <div class="mt-3 pt-3 border-t border-slate-700 flex justify-between text-xs text-slate-300">
+                        <span>Office 10%: <strong class="text-white" id="dash-office-usd">$0.00</strong></span>
+                        <span>Drivers 90%: <strong class="text-white" id="dash-drivers-cut-usd">$0.00</strong></span>
                     </div>
                 </div>
 
                 <!-- LBP Total Gross Revenue -->
-                <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
+                <div class="hidden bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm relative overflow-hidden">
                     <div class="flex justify-between items-start">
                         <div>
                             <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Gross (LBP)</p>
@@ -912,7 +912,7 @@
                         }
 
                         if (cachedGistId) {
-                            await fetch(`https://api.github.com/gists/${cachedGistId}`, {
+                            const patchRes = await fetch(`https://api.github.com/gists/${cachedGistId}`, {
                                 method: 'PATCH',
                                 headers: authHeaders,
                                 body: JSON.stringify({
@@ -1105,7 +1105,6 @@
                     totals[cur].gross += amt;
                     totals[cur].cash += amt;
                 } else if (r.type === 'To Samer') {
-                    totals[cur].gross += amt;
                     totals[cur].ToSamer += amt; // Driver holds this physical cash, but gets 0% driver cut
                 } else if (r.type === 'Whish') {
                     totals[cur].gross += amt;
@@ -1141,7 +1140,7 @@
                     ToSamer: data.ToSamer,
                     whishInOwner: data.whish,
                     tabPaid: data.tabPaid,
-                    tabTotal: data.tabTotal || (data.tabUnpaid + data.tabPaid),
+                    tabTotal: data.tabUnpaid + data.tabPaid,
                     driverCut90: driverCut90,
                     officeCut10: officeCut10,
                     netSettlement: netSettlement
@@ -1246,9 +1245,18 @@
                         totalLBP.tab += m.LBP.tabUnpaid;
                     });
 
-                    document.getElementById('dash-gross-usd').innerText = `$${totalUSD.gross.toFixed(2)}`;
-                    document.getElementById('dash-office-usd').innerText = `$${(totalUSD.gross * 0.1).toFixed(2)}`;
-                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(totalUSD.gross * 0.9).toFixed(2)}`;
+                    const splitGrossUSD = rides
+                        .filter(r => {
+                            const isSettled = r.driverSettled === true;
+                            const cur = (r.currency || 'USD').toUpperCase();
+                            const type = (r.type || '').trim();
+                            return !isSettled && cur === 'USD' && (type === 'Cash' || type === 'Whish' || type === 'On Tab');
+                        })
+                        .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
+                    document.getElementById('dash-gross-usd').innerText = `$${splitGrossUSD.toFixed(2)}`;
+                    document.getElementById('dash-office-usd').innerText = `$${(splitGrossUSD * 0.1).toFixed(2)}`;
+                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(splitGrossUSD * 0.9).toFixed(2)}`;
 
                     document.getElementById('dash-gross-lbp').innerText = `LBP ${Math.round(totalLBP.gross).toLocaleString()}`;
                     document.getElementById('dash-office-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.1).toLocaleString()}`;
@@ -1256,7 +1264,8 @@
 
                     document.getElementById('dash-cash-usd').innerText = `$${totalUSD.cash.toFixed(2)}`;
                     document.getElementById('dash-whish-usd').innerText = `$${totalUSD.whish.toFixed(2)}`;
-                    document.getElementById('dash-tabs-usd').innerText = `$${totalUSD.tab.toFixed(2)}`;
+                    const safeTabsUSD = Number.isFinite(totalUSD.tab) ? totalUSD.tab : 0;
+                    document.getElementById('dash-tabs-usd').innerText = `$${safeTabsUSD.toFixed(2)}`;                    
 
                     document.getElementById('dash-cash-lbp').innerText = `LBP ${Math.round(totalLBP.cash).toLocaleString()}`;
                     document.getElementById('dash-whish-lbp').innerText = `LBP ${Math.round(totalLBP.whish).toLocaleString()}`;
