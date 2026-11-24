@@ -1245,6 +1245,7 @@
                         totalLBP.tab += m.LBP.tabUnpaid;
                     });
 
+                    console.log('DASHBOARD DEBUG:', { ridesLen: rides.length, driversLen: drivers.length, sample: rides[0] });
                     const splitGrossUSD = rides
                         .filter(r => {
                             const isSettled = r.driverSettled === true;
@@ -1264,8 +1265,11 @@
 
                     document.getElementById('dash-cash-usd').innerText = `$${totalUSD.cash.toFixed(2)}`;
                     document.getElementById('dash-whish-usd').innerText = `$${totalUSD.whish.toFixed(2)}`;
-                    const safeTabsUSD = Number.isFinite(totalUSD.tab) ? totalUSD.tab : 0;
-                    document.getElementById('dash-tabs-usd').innerText = `$${safeTabsUSD.toFixed(2)}`;                    
+                    const unsettledTabsUSD = rides
+                        .filter(r => !r.driverSettled && (r.currency || 'USD') === 'USD' && (r.type || '').trim() === 'On Tab' && r.tabStatus !== 'Paid')
+                        .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
+                    document.getElementById('dash-tabs-usd').innerText = `$${unsettledTabsUSD.toFixed(2)}`;
 
                     document.getElementById('dash-cash-lbp').innerText = `LBP ${Math.round(totalLBP.cash).toLocaleString()}`;
                     document.getElementById('dash-whish-lbp').innerText = `LBP ${Math.round(totalLBP.whish).toLocaleString()}`;
