@@ -1246,7 +1246,12 @@
                     });
 
                     const splitGrossUSD = rides
-                        .filter(r => !r.driverSettled && (r.currency || 'USD') === 'USD' && ['Cash', 'Whish', 'On Tab'].includes(r.type))
+                        .filter(r => {
+                            const isSettled = r.driverSettled === true;
+                            const cur = (r.currency || 'USD').toUpperCase();
+                            const type = (r.type || '').trim();
+                            return !isSettled && cur === 'USD' && (type === 'Cash' || type === 'Whish' || type === 'On Tab');
+                        })
                         .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
                     document.getElementById('dash-gross-usd').innerText = `$${splitGrossUSD.toFixed(2)}`;
