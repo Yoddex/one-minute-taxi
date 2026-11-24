@@ -1246,12 +1246,12 @@
                     });
 
                     const splitGrossUSD = rides
-                        .filter(r => (r.currency || 'USD') === 'USD' && ['Cash', 'Whish', 'On Tab'].includes(r.type))
+                        .filter(r => !r.driverSettled && (r.currency || 'USD') === 'USD' && ['Cash', 'Whish', 'On Tab'].includes(r.type))
                         .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
 
                     document.getElementById('dash-gross-usd').innerText = `$${splitGrossUSD.toFixed(2)}`;
                     document.getElementById('dash-office-usd').innerText = `$${(splitGrossUSD * 0.1).toFixed(2)}`;
-                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(splitGrossUSD * 0.9).toFixed(2)}`;
+                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(splitGrossUSD * 0.9).toFixed(2)}`;                    
 
                     document.getElementById('dash-gross-lbp').innerText = `LBP ${Math.round(totalLBP.gross).toLocaleString()}`;
                     document.getElementById('dash-office-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.1).toLocaleString()}`;
