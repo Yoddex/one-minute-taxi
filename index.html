@@ -1105,7 +1105,6 @@
                     totals[cur].gross += amt;
                     totals[cur].cash += amt;
                 } else if (r.type === 'To Samer') {
-                    totals[cur].gross += amt;
                     totals[cur].ToSamer += amt; // Driver holds this physical cash, but gets 0% driver cut
                 } else if (r.type === 'Whish') {
                     totals[cur].gross += amt;
@@ -1246,9 +1245,13 @@
                         totalLBP.tab += m.LBP.tabUnpaid;
                     });
 
-                    document.getElementById('dash-gross-usd').innerText = `$${totalUSD.gross.toFixed(2)}`;
-                    document.getElementById('dash-office-usd').innerText = `$${(totalUSD.gross * 0.1).toFixed(2)}`;
-                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(totalUSD.gross * 0.9).toFixed(2)}`;
+                    const splitGrossUSD = rides
+                        .filter(r => (r.currency || 'USD') === 'USD' && ['Cash', 'Whish', 'On Tab'].includes(r.type))
+                        .reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
+                    document.getElementById('dash-gross-usd').innerText = `$${splitGrossUSD.toFixed(2)}`;
+                    document.getElementById('dash-office-usd').innerText = `$${(splitGrossUSD * 0.1).toFixed(2)}`;
+                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(splitGrossUSD * 0.9).toFixed(2)}`;
 
                     document.getElementById('dash-gross-lbp').innerText = `LBP ${Math.round(totalLBP.gross).toLocaleString()}`;
                     document.getElementById('dash-office-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.1).toLocaleString()}`;
