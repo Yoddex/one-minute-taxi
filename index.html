@@ -1251,7 +1251,7 @@
 
                     document.getElementById('dash-gross-usd').innerText = `$${splitGrossUSD.toFixed(2)}`;
                     document.getElementById('dash-office-usd').innerText = `$${(splitGrossUSD * 0.1).toFixed(2)}`;
-                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(splitGrossUSD * 0.9).toFixed(2)}`;                    
+                    document.getElementById('dash-drivers-cut-usd').innerText = `$${(splitGrossUSD * 0.9).toFixed(2)}`;
 
                     document.getElementById('dash-gross-lbp').innerText = `LBP ${Math.round(totalLBP.gross).toLocaleString()}`;
                     document.getElementById('dash-office-lbp').innerText = `LBP ${Math.round(totalLBP.gross * 0.1).toLocaleString()}`;
@@ -2189,37 +2189,58 @@ async function downloadClientInvoicePDF(clientName) {
             const select = document.getElementById('payment-client-select');
             select.innerHTML = '<option value="">-- Choose Client --</option>';
 
-            // Set exchange rate input in modal to current global exchange rate
             const globalRateInput = document.getElementById('exchange-rate-input');
             const currentRate = globalRateInput ? (globalRateInput.value || '90000') : '90000';
             document.getElementById('payment-exchange-rate').value = currentRate;
 
-            // Populate dropdown with clients who have unpaid rides OR a positive net balance
-            const unpaidBalances = getClientUnpaidBalances();
             const rate = parseFloat(currentRate) || 90000;
-            const allPaymentsList = (typeof payments !== 'undefined' && Array.isArray(payments)) ? payments : [];
             const allRidesList = (typeof rides !== 'undefined' && Array.isArray(rides)) ? rides : [];
+            const allPaymentsList = (typeof payments !== 'undefined' && Array.isArray(payments)) ? payments : [];
+            const allClientsList = (typeof clients !== 'undefined' && Array.isArray(clients)) ? clients : [];
 
-            allRidesList.filter(r => r.type === 'On Tab' && r.client).forEach(r => {
-                const name = r.client.trim();
-                const chargesUSD = allRidesList
-                    .filter(x => x.type === 'On Tab' && (x.client || '').trim().toLowerCase() === name.toLowerCase())
-                    .reduce((sum, x) => sum + (parseFloat(x.amount || 0) / (x.currency === 'LBP' ? rate : 1)), 0);
-                const paidUSD = allPaymentsList
-                    .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === name.toLowerCase())
-                    .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
-                const netBalance = chargesUSD - paidUSD;
-                if (netBalance > 0.01 && (!unpaidBalances[name] || unpaidBalances[name] <= 0)) {
-                    unpaidBalances[name] = netBalance;
+            // Collect every client from registered clients and On Tab rides
+            const nameMap = new Map();
+            allClientsList.forEach(c => {
+                const clean = (c.name || '').trim();
+                if (clean && !nameMap.has(clean.toLowerCase())) {
+                    nameMap.set(clean.toLowerCase(), clean);
+                }
+            });
+            allRidesList.forEach(r => {
+                if (r.type === 'On Tab' && r.client) {
+                    const clean = r.client.trim();
+                    if (clean && !nameMap.has(clean.toLowerCase())) {
+                        nameMap.set(clean.toLowerCase(), clean);
+                    }
                 }
             });
 
-            const clientsWithTabs = Object.keys(unpaidBalances).filter(name => unpaidBalances[name] > 0.01).sort();
+            const sortedNames = Array.from(nameMap.values()).sort((a, b) =>
+                a.localeCompare(b, undefined, { sensitivity: 'base' })
+            );
 
-            clientsWithTabs.forEach(name => {
+            sortedNames.forEach(name => {
+                const key = name.toLowerCase();
+                const chargesUSD = allRidesList
+                    .filter(r => r.type === 'On Tab' && (r.client || '').trim().toLowerCase() === key)
+                    .reduce((sum, r) => sum + (parseFloat(r.amount || 0) / (r.currency === 'LBP' ? rate : 1)), 0);
+
+                const paidUSD = allPaymentsList
+                    .filter(p => (p.clientName || p.client || '').trim().toLowerCase() === key)
+                    .reduce((sum, p) => sum + parseFloat(p.amountPaid || p.totalPaidUSD || p.amount || 0), 0);
+
+                const netBalance = chargesUSD - paidUSD;
+
+                let statusLabel = '$0.00 Due';
+                if (netBalance > 0.01) {
+                    statusLabel = `$${netBalance.toFixed(2)} Due`;
+                } else if (netBalance < -0.01) {
+                    statusLabel = `$${Math.abs(netBalance).toFixed(2)} Surplus`;
+                }
+
                 const opt = document.createElement('option');
                 opt.value = name;
-                opt.textContent = `${name} ($${unpaidBalances[name].toFixed(2)} Due)`;
+                opt.textContent = `${name} (${statusLabel})`;
                 select.appendChild(opt);
             });
 
